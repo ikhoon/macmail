@@ -3,6 +3,8 @@
 **A fast, scriptable CLI for macOS Mail.app.** Triage, search, read, and reply
 to your mail from the terminal — no Gmail API, no IMAP, no OAuth.
 
+[![CI](https://github.com/ikhoon/macmail/actions/workflows/ci.yml/badge.svg)](https://github.com/ikhoon/macmail/actions/workflows/ci.yml)
+
 ```console
 $ macmail triage --account Work --max 3
 2197647   CI Bot <ci@example.com>           Build #1242 failed: deploy …   2026-06-01T16:17:23+09:00
@@ -38,11 +40,26 @@ Mail.app via AppleScript.
 
 ## Install
 
+> Apple Silicon (arm64) only for now.
+
+### Homebrew (recommended)
+
+```bash
+brew install ikhoon/tap/macmail
+```
+
+### From a release
+
+Download `macmail-<version>-macos-arm64.zip` from
+[Releases](https://github.com/ikhoon/macmail/releases), unzip it, and run
+`./install.sh` (it clears the download quarantine and installs the app).
+
+### From source
+
 Requires [Bun](https://bun.sh) 1.0+.
 
 ```bash
-brew install bun                       # or: curl -fsSL https://bun.sh/install | bash
-git clone <repo-url> ~/src/macmail
+git clone https://github.com/ikhoon/macmail ~/src/macmail
 cd ~/src/macmail
 ./install.sh
 ```
