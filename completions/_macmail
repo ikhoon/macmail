@@ -1,0 +1,164 @@
+#compdef macmail
+# zsh completion for macmail.
+# Install: symlink this file as `_macmail` into a directory on $fpath, e.g.
+#   ~/.local/share/zsh/site-functions, then run `compinit`.
+
+_macmail() {
+  local curcontext="$curcontext" state line
+  typeset -A opt_args
+
+  _arguments -C \
+    '(-h --help)'{-h,--help}'[show help]' \
+    '1: :_macmail_subcommands' \
+    '*::arg:->args'
+
+  case $state in
+    args)
+      curcontext="${curcontext%:*:*}:macmail-$words[1]:"
+      case $words[1] in
+        accounts)  _macmail_cmd_accounts ;;
+        mailboxes) _macmail_cmd_mailboxes ;;
+        triage)    _macmail_cmd_triage ;;
+        search)    _macmail_cmd_search ;;
+        read)      _macmail_cmd_read ;;
+        mark)      _macmail_cmd_mark ;;
+        send)      _macmail_cmd_send ;;
+        reply)     _macmail_cmd_reply ;;
+        completions) _macmail_cmd_completions ;;
+      esac
+      ;;
+  esac
+}
+
+_macmail_subcommands() {
+  local -a subs
+  subs=(
+    'accounts:list configured Mail.app accounts'
+    'mailboxes:list mailboxes for an account'
+    'triage:show unread messages'
+    'search:search messages by keyword'
+    'read:print message body'
+    'mark:mark message read or unread'
+    'send:send or draft a new message'
+    'reply:reply to a message'
+    'completions:print or install shell completion'
+    'help:show help'
+  )
+  _describe -t commands 'subcommand' subs
+}
+
+# Dynamic completion helpers — shell out to macmail for live data.
+_macmail_get_accounts() {
+  local -a accts
+  accts=("${(@f)$(macmail accounts 2>/dev/null)}")
+  _describe -t accounts 'account' accts
+}
+
+_macmail_get_mailboxes() {
+  local acct="${opt_args[--account]:-${MACMAIL_DEFAULT_ACCOUNT:-}}"
+  local -a mbs
+  mbs=("${(@f)$(macmail mailboxes --filter "$acct" 2>/dev/null)}")
+  _describe -t mailboxes 'mailbox' mbs
+}
+
+_macmail_cmd_accounts() {
+  _arguments '--json[NDJSON output]'
+}
+
+_macmail_cmd_mailboxes() {
+  _arguments \
+    '--filter[case-insensitive substring filter on mailbox URL]:pattern:' \
+    '--json[NDJSON output]'
+}
+
+_macmail_cmd_triage() {
+  _arguments \
+    '--account[mail account]:account:_macmail_get_accounts' \
+    '--mailbox[mailbox name]:mailbox:_macmail_get_mailboxes' \
+    '--max[max results]:n:' \
+    '--json[NDJSON output]'
+}
+
+_macmail_cmd_search() {
+  _arguments \
+    '--account[mail account]:account:_macmail_get_accounts' \
+    '--mailbox[mailbox name]:mailbox:_macmail_get_mailboxes' \
+    '--max[max results]:n:' \
+    '--json[NDJSON output]' \
+    '--in[search scope]:scope:(subject body both)' \
+    '--days[limit to last N days, 0 for all time]:n:' \
+    '--since[lower bound: date or today/yesterday/Nd/Nw, local midnight]:date-or-relative:' \
+    '--until[upper bound (exclusive): date or today/yesterday/Nd/Nw, local]:date-or-relative:' \
+    '--sender[sender substring]:pattern:' \
+    '--to[recipient substring]:pattern:' \
+    '--unread[only unread messages]' \
+    '--flagged[only flagged messages]' \
+    '--count-only[print totals only]' \
+    '--snippet[attach ±N chars of body context]:chars:' \
+    '--body[attach decoded body text (truncate at N)]:chars:' \
+    '1:query:'
+}
+
+_macmail_cmd_read() {
+  # `read` locates by id alone (file system walk under ~/Library/Mail);
+  # --account/--mailbox don't apply here.
+  _arguments \
+    '--json[full JSON output]' \
+    '--headers[include From/To/Date/Subject/Message-ID]' \
+    '--html[return the HTML body instead of plain text]' \
+    '1:message id:'
+}
+
+_macmail_cmd_mark() {
+  _arguments \
+    '--account[mail account]:account:_macmail_get_accounts' \
+    '--mailbox[mailbox name]:mailbox:_macmail_get_mailboxes' \
+    '--dry-run[preview only, no Mail.app mutation]' \
+    '(-y --yes)'{-y,--yes}'[skip confirmation prompt]' \
+    '1:message id:' \
+    '2:state:(read unread)'
+}
+
+_macmail_cmd_send() {
+  # send uses Mail.app's default sending account; --account/--mailbox are ignored,
+  # so they're not advertised here.
+  _arguments \
+    '--max[max results]:n:' \
+    '--json[NDJSON output]' \
+    '--dry-run[preview only, no Mail.app mutation]' \
+    '(-y --yes)'{-y,--yes}'[skip confirmation prompt]' \
+    '--to[recipient]:email:' \
+    '--subject[subject line]:text:' \
+    '--body[message body]:text:' \
+    '--cc[cc recipient]:email:' \
+    '--bcc[bcc recipient]:email:' \
+    '--draft[save as draft (persists to Drafts)]'
+}
+
+_macmail_cmd_reply() {
+  _arguments \
+    '--account[mail account]:account:_macmail_get_accounts' \
+    '--mailbox[mailbox name]:mailbox:_macmail_get_mailboxes' \
+    '--dry-run[preview only, no Mail.app mutation]' \
+    '(-y --yes)'{-y,--yes}'[skip confirmation prompt]' \
+    '--body[reply body]:text:' \
+    '--all[reply to all recipients]' \
+    '--draft[save as draft (persists to Drafts)]' \
+    '1:message id:'
+}
+
+_macmail_cmd_completions() {
+  _arguments \
+    '--shell[target shell]:shell:(zsh bash)' \
+    '--install[write the script to the standard location and print how to enable it]'
+}
+
+# Loaded via fpath autoload → run the completer; loaded via
+# `source <(macmail completions --shell zsh)` → just register it (running the
+# completer outside a completion context errors with "_arguments: can only be
+# called from completion function").
+if [[ "${funcstack[1]}" = _macmail ]]; then
+    _macmail "$@"
+else
+    compdef _macmail macmail
+fi

@@ -1,0 +1,26 @@
+{
+  "name": "macmail",
+  "version": "0.2.0",
+  "description": "macOS Mail.app CLI — file-based read backend, AppleScript writes",
+  "type": "module",
+  "bin": {
+    "macmail": "./dist/macmail"
+  },
+  "scripts": {
+    "build": "rm -f .*-*.bun-build && bun build src/cli.ts --compile --outfile dist/macmail && rm -f .*-*.bun-build && codesign --sign - --identifier kr.ikhoon.macmail --force dist/macmail",
+    "test": "bun test --path-ignore-patterns='**/local/**'",
+    "test:local": "bun test tests/local",
+    "test:all": "bun test",
+    "dev": "bun run src/cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "mailparser": "^3.7.4"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/mailparser": "^3.4.6",
+    "typescript": "^5.6.0"
+  }
+}

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>kr.ikhoon.macmail</string>
+    <!-- Packaged as a .app bundle so macmail shows up in System Settings →
+         Full Disk Access by name and icon (a bare CLI shows a generic entry).
+         Pairs with the TCC responsibility disclaim (see src/lib/disclaim.ts),
+         which makes macmail — not the terminal — the responsible process. -->
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>macmail</string>
+    <key>CFBundleExecutable</key>
+    <string>macmail</string>
+    <key>CFBundleIconFile</key>
+    <string>macmail</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.2.0</string>
+    <key>CFBundleVersion</key>
+    <string>0.2.0</string>
+</dict>
+</plist>
