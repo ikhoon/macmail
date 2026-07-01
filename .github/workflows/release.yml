@@ -1,13 +1,17 @@
 name: Release
 
-# Tag-driven release. Push a v<version> tag that matches package.json and this:
-#   1. builds + ad-hoc codesigns the arm64 macmail.app and zips it,
-#   2. publishes a GitHub release with that zip,
-#   3. bumps the Homebrew formula in ikhoon/homebrew-tap.
+# Builds + ad-hoc codesigns the arm64 macmail.app, publishes a GitHub release
+# with the zip, then bumps the Homebrew formula in ikhoon/homebrew-tap.
 #
-# Cutting a release is then just:
-#   # bump "version" in package.json, commit
-#   git tag v0.3.0 && git push origin v0.3.0
+# Two ways to trigger it:
+#   1. Actions -> Release -> "Run workflow", type the version (e.g. 0.3.0). It
+#      creates + pushes the v<version> tag, then runs the release in this same
+#      run. (Pushing the tag with GITHUB_TOKEN does NOT re-trigger the tag path
+#      below — GitHub suppresses that to avoid recursion — so there's no double
+#      run.)
+#   2. Push a v<version> tag yourself: `git tag v0.3.0 && git push origin v0.3.0`.
+#
+# Either way the version must match package.json (bump + commit it first).
 #
 # One-time setup: add a repository secret HOMEBREW_TAP_TOKEN — a PAT with
 # Contents: read/write on ikhoon/homebrew-tap. The default GITHUB_TOKEN cannot
@@ -17,9 +21,15 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version, e.g. 0.3.0 — must match package.json; creates + pushes tag v<version>"
+        required: true
+        type: string
 
 permissions:
-  contents: write # create the GitHub release in THIS repo
+  contents: write # create the GitHub release + push the tag in THIS repo
 
 concurrency:
   group: release-${{ github.ref }}
@@ -36,15 +46,54 @@ jobs:
         with:
           bun-version: "1.3.14"
 
-      - name: Verify tag matches package.json version
+      - name: Resolve version + tag
+        id: v
+        env:
+          # Pass the dispatch input through the environment, not ${{ }} string
+          # interpolation, so a hostile/malformed value can't break out of the
+          # shell (github.event_name / GITHUB_REF_NAME are trusted contexts).
+          VERSION_INPUT: ${{ inputs.version }}
         run: |
-          TAG="${GITHUB_REF_NAME#v}"
-          PKG="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' package.json | head -1)"
-          echo "tag=$TAG  package.json=$PKG"
-          if [ "$TAG" != "$PKG" ]; then
-            echo "::error::tag v$TAG does not match package.json version $PKG — bump package.json first"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="$VERSION_INPUT"
+          else
+            VERSION="$GITHUB_REF_NAME"
+          fi
+          VERSION="${VERSION#v}" # tolerate a leading "v"
+          # Accept only a SemVer-ish version — it flows into git/gh/sed below.
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$'; then
+            echo "::error::invalid version '$VERSION' — expected SemVer like 0.3.0"
             exit 1
           fi
+          {
+            echo "version=$VERSION"
+            echo "tag=v$VERSION"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Verify version matches package.json
+        run: |
+          VERSION="${{ steps.v.outputs.version }}"
+          PKG="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' package.json | head -1)"
+          echo "version=$VERSION  package.json=$PKG"
+          if [ "$VERSION" != "$PKG" ]; then
+            echo "::error::version $VERSION does not match package.json $PKG — bump package.json first"
+            exit 1
+          fi
+
+      - name: Create + push tag (workflow_dispatch only)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          TAG="${{ steps.v.outputs.tag }}"
+          if git ls-remote --exit-code origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::tag $TAG already exists — bump the version first"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "macmail $TAG"
+          # actions/checkout persists the GITHUB_TOKEN, so this push is authorized;
+          # a GITHUB_TOKEN-pushed tag does NOT re-trigger the on.push.tags run.
+          git push origin "$TAG"
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -64,11 +113,10 @@ jobs:
       - name: Resolve artifact + checksum
         id: artifact
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VERSION="${{ steps.v.outputs.version }}"
           ZIP="dist/macmail-${VERSION}-macos-arm64.zip"
           SHA="$(shasum -a 256 "$ZIP" | cut -d' ' -f1)"
           {
-            echo "version=$VERSION"
             echo "zip=$ZIP"
             echo "sha256=$SHA"
           } >> "$GITHUB_OUTPUT"
@@ -77,12 +125,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          TAG="${{ steps.v.outputs.tag }}"
           ZIP="${{ steps.artifact.outputs.zip }}"
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" "$ZIP" --clobber
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ZIP" --clobber
           else
-            gh release create "$GITHUB_REF_NAME" "$ZIP" \
-              --title "macmail ${{ steps.artifact.outputs.version }}" \
+            gh release create "$TAG" "$ZIP" \
+              --title "macmail ${{ steps.v.outputs.version }}" \
               --generate-notes
           fi
 
@@ -95,7 +144,7 @@ jobs:
 
       - name: Bump the formula
         run: |
-          VERSION="${{ steps.artifact.outputs.version }}"
+          VERSION="${{ steps.v.outputs.version }}"
           SHA="${{ steps.artifact.outputs.sha256 }}"
           URL="https://github.com/ikhoon/macmail/releases/download/v${VERSION}/macmail-${VERSION}-macos-arm64.zip"
           F="homebrew-tap/Formula/macmail.rb"
@@ -112,7 +161,7 @@ jobs:
       - name: Commit + push the tap
         working-directory: homebrew-tap
         run: |
-          VERSION="${{ steps.artifact.outputs.version }}"
+          VERSION="${{ steps.v.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git diff --quiet; then
