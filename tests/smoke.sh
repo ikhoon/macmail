@@ -35,9 +35,12 @@ assert_exits_nonzero() {
 
 echo "macmail smoke tests"
 
-# Version / help
+# Version / help — assert the binary reports package.json's version (the single
+# source src/cli.ts imports), falling back to a loose check when the manifest
+# isn't alongside (e.g. smoke-testing a downloaded binary).
+EXPECTED_VERSION=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$SCRIPT_DIR/../package.json" 2>/dev/null | head -1)
 out=$("$MACMAIL" --version 2>&1)
-assert_match "--version prints semver" "0.2." "$out"
+assert_match "--version reports ${EXPECTED_VERSION:-a semver}" "${EXPECTED_VERSION:-.}" "$out"
 
 out=$("$MACMAIL" --help 2>&1)
 for sub in accounts mailboxes triage search read mark send reply completions; do

@@ -1,0 +1,124 @@
+name: Release
+
+# Tag-driven release. Push a v<version> tag that matches package.json and this:
+#   1. builds + ad-hoc codesigns the arm64 macmail.app and zips it,
+#   2. publishes a GitHub release with that zip,
+#   3. bumps the Homebrew formula in ikhoon/homebrew-tap.
+#
+# Cutting a release is then just:
+#   # bump "version" in package.json, commit
+#   git tag v0.3.0 && git push origin v0.3.0
+#
+# One-time setup: add a repository secret HOMEBREW_TAP_TOKEN — a PAT with
+# Contents: read/write on ikhoon/homebrew-tap. The default GITHUB_TOKEN cannot
+# push to another repo, so the tap bump needs its own token.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write # create the GitHub release in THIS repo
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false # never interrupt a release mid-flight
+
+jobs:
+  release:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.14"
+
+      - name: Verify tag matches package.json version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' package.json | head -1)"
+          echo "tag=$TAG  package.json=$PKG"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "::error::tag v$TAG does not match package.json version $PKG — bump package.json first"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test (CI tier — fixtures only)
+        run: bun run test
+
+      - name: Build + package the release zip
+        run: bash scripts/package-release.sh
+
+      - name: Smoke test the packaged binary
+        run: bash tests/smoke.sh
+
+      - name: Resolve artifact + checksum
+        id: artifact
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ZIP="dist/macmail-${VERSION}-macos-arm64.zip"
+          SHA="$(shasum -a 256 "$ZIP" | cut -d' ' -f1)"
+          {
+            echo "version=$VERSION"
+            echo "zip=$ZIP"
+            echo "sha256=$SHA"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ZIP="${{ steps.artifact.outputs.zip }}"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "$ZIP" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "$ZIP" \
+              --title "macmail ${{ steps.artifact.outputs.version }}" \
+              --generate-notes
+          fi
+
+      - name: Check out the Homebrew tap
+        uses: actions/checkout@v5
+        with:
+          repository: ikhoon/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Bump the formula
+        run: |
+          VERSION="${{ steps.artifact.outputs.version }}"
+          SHA="${{ steps.artifact.outputs.sha256 }}"
+          URL="https://github.com/ikhoon/macmail/releases/download/v${VERSION}/macmail-${VERSION}-macos-arm64.zip"
+          F="homebrew-tap/Formula/macmail.rb"
+          # BSD sed (macOS runner): -i needs an explicit empty backup suffix.
+          sed -i '' \
+            -e "s|^  version \".*\"|  version \"${VERSION}\"|" \
+            -e "s|^  url \".*\"|  url \"${URL}\"|" \
+            -e "s|^  sha256 \".*\"|  sha256 \"${SHA}\"|" \
+            -e "s|assert_match \"[^\"]*\"|assert_match \"${VERSION}\"|" \
+            "$F"
+          echo "----- updated Formula/macmail.rb -----"
+          cat "$F"
+
+      - name: Commit + push the tap
+        working-directory: homebrew-tap
+        run: |
+          VERSION="${{ steps.artifact.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "formula already up to date; nothing to commit"
+            exit 0
+          fi
+          git add Formula/macmail.rb
+          git commit -m "Update macmail formula to ${VERSION}"
+          git push

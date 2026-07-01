@@ -2,6 +2,7 @@
 // macmail — TypeScript entry point.
 
 import { Command } from 'commander';
+import pkg from '../package.json';
 import { canReadMailDir, promptFullDiskAccess, fdaGrantTarget } from './lib/osascript.ts';
 import {
   resolveAccountSelector,
@@ -106,7 +107,7 @@ const program = new Command();
 program
   .name('macmail')
   .description('macOS Mail.app CLI — file-based reads, AppleScript writes')
-  .version('0.2.0')
+  .version(pkg.version)
   .addHelpText(
     'after',
     `
