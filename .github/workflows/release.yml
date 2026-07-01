@@ -48,13 +48,23 @@ jobs:
 
       - name: Resolve version + tag
         id: v
+        env:
+          # Pass the dispatch input through the environment, not ${{ }} string
+          # interpolation, so a hostile/malformed value can't break out of the
+          # shell (github.event_name / GITHUB_REF_NAME are trusted contexts).
+          VERSION_INPUT: ${{ inputs.version }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="${{ inputs.version }}"
+            VERSION="$VERSION_INPUT"
           else
             VERSION="$GITHUB_REF_NAME"
           fi
           VERSION="${VERSION#v}" # tolerate a leading "v"
+          # Accept only a SemVer-ish version — it flows into git/gh/sed below.
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$'; then
+            echo "::error::invalid version '$VERSION' — expected SemVer like 0.3.0"
+            exit 1
+          fi
           {
             echo "version=$VERSION"
             echo "tag=v$VERSION"
@@ -74,7 +84,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: |
           TAG="${{ steps.v.outputs.tag }}"
-          if git ls-remote --exit-code --tags origin "$TAG" >/dev/null 2>&1; then
+          if git ls-remote --exit-code origin "refs/tags/$TAG" >/dev/null 2>&1; then
             echo "::error::tag $TAG already exists — bump the version first"
             exit 1
           fi
