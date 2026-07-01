@@ -15,6 +15,13 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 ARCH="arm64" # macmail is Apple Silicon only for now (see README).
+# We only produce the arm64 artifact; refuse to run on an Intel host, where bun
+# would emit an x64 binary that we'd then mislabel as ...-macos-arm64.zip.
+HOST_ARCH="$(uname -m)"
+if [ "$HOST_ARCH" != "arm64" ]; then
+  echo "package-release: must run on Apple Silicon (arm64); host is $HOST_ARCH" >&2
+  exit 1
+fi
 
 # package.json is the single source of truth for the version (src/cli.ts and the
 # smoke test both read it); parse it without a jq/node dependency.
