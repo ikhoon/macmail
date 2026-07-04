@@ -84,6 +84,7 @@ assert_match "reply --dry-run prints summary" "DRY-RUN" "$out"
 # Invalid input
 assert_exits_nonzero "unknown subcommand fails" "$MACMAIL" nope
 assert_exits_nonzero "mark with bad state fails" "$MACMAIL" mark 1 nope --dry-run
+assert_exits_nonzero "mark rejects a non-integer id" "$MACMAIL" mark 12abc read --dry-run
 assert_exits_nonzero "send without --to fails" "$MACMAIL" send --subject s --body b --dry-run
 
 echo

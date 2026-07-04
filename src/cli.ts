@@ -101,6 +101,13 @@ function requireWriteAccount(account: string, cmd: string): void {
   );
 }
 
+/** Parse a non-negative integer, rejecting trailing garbage — `Number.parseInt`
+ *  alone turns "12abc" into 12 and "5x" into 5. */
+function parseIntStrict(s: string, label: string): number {
+  if (!/^\d+$/.test(s.trim())) throw new Error(`${label} must be an integer`);
+  return Number.parseInt(s.trim(), 10);
+}
+
 const program = new Command();
 program
   .name('macmail')
@@ -212,8 +219,7 @@ The id comes from the first column of triage / search output.`,
   .option('--html', 'return the HTML body instead of plain text')
   .action(async (idStr: string, opts) => {
     requireFda();
-    const id = Number.parseInt(idStr, 10);
-    if (!Number.isFinite(id)) throw new Error('id must be an integer');
+    const id = parseIntStrict(idStr, 'id');
     const out = await runRead(id, {
       json: !!opts.json,
       headers: !!opts.headers,
@@ -273,10 +279,9 @@ YYYY-MM-DD, MM-DD, or a token (today/yesterday/Nd/Nw) at local midnight.`,
     if (!['subject', 'body', 'both'].includes(scope)) {
       throw new Error(`--in must be subject|body|both (got '${opts.in}')`);
     }
-    const max = Number.parseInt(opts.max, 10);
-    if (!Number.isFinite(max) || max <= 0) throw new Error('--max must be a positive integer');
-    const days = Number.parseInt(opts.days, 10);
-    if (!Number.isFinite(days) || days < 0) throw new Error('--days must be a non-negative integer');
+    const max = parseIntStrict(opts.max, '--max');
+    if (max <= 0) throw new Error('--max must be a positive integer');
+    const days = parseIntStrict(opts.days, '--days');
 
     // Body search needs a query to grep against the .emlx body. Subject /
     // both can still work as filter-only when --sender / --since / etc.
@@ -367,8 +372,8 @@ Examples:
   .option('--max <n>', 'maximum results', '20')
   .action((opts) => {
     requireFda();
-    const max = Number.parseInt(opts.max, 10);
-    if (!Number.isFinite(max) || max <= 0) {
+    const max = parseIntStrict(opts.max, '--max');
+    if (max <= 0) {
       throw new Error('--max must be a positive integer');
     }
     // See `search` above — translate the selector to the on-disk UUID; an
@@ -401,8 +406,7 @@ Examples:
   .option('--dry-run', "preview only, don't mutate Mail.app")
   .option('-y, --yes', 'skip confirmation prompt')
   .action(async (idStr: string, stateStr: string, opts) => {
-    const id = Number.parseInt(idStr, 10);
-    if (!Number.isFinite(id)) throw new Error('id must be an integer');
+    const id = parseIntStrict(idStr, 'id');
     if (stateStr !== 'read' && stateStr !== 'unread') {
       throw new Error(`state must be 'read' or 'unread' (got '${stateStr}')`);
     }
@@ -484,8 +488,7 @@ Examples:
   .option('--dry-run', 'preview only')
   .option('-y, --yes', 'skip confirmation prompt')
   .action(async (idStr: string, opts) => {
-    const id = Number.parseInt(idStr, 10);
-    if (!Number.isFinite(id)) throw new Error('id must be an integer');
+    const id = parseIntStrict(idStr, 'id');
     requireWriteAccount(opts.account, 'reply');
     await withInlineScript(REPLY_APPLESCRIPT, async (path) => {
       const out = await runReply(

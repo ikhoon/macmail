@@ -209,6 +209,12 @@ export function mailboxUrlToFsPath(
       }
     });
   if (segments.length === 0) return null;
+  // Guard against a percent-encoded `../` (or a literal separator) in a segment
+  // escaping the mail dir once decoded, e.g. `%2e%2e%2f`. The URL comes from the
+  // trusted Envelope Index, so this is defense-in-depth.
+  if (segments.some((s) => s === '.' || s === '..' || s.includes('/') || s.includes('\\'))) {
+    return null;
+  }
   const mboxSegs = segments.map((s) => `${s}.mbox`);
   return join(mailVersionDir, acctId, ...mboxSegs);
 }
