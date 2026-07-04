@@ -4,7 +4,7 @@
 import { Command } from 'commander';
 import pkg from '../package.json';
 import { configureColor } from './lib/color.ts';
-import { canReadMailDir, promptFullDiskAccess, fdaGrantTarget } from './lib/osascript.ts';
+import { canReadMailDir, promptFullDiskAccess } from './lib/osascript.ts';
 import {
   resolveAccountSelector,
   resolveAccountSelectorVerbose,
@@ -67,15 +67,12 @@ function requireFda(): void {
   if (opened) {
     console.error(
       'macmail: Full Disk Access required. In the Settings window that just opened, ' +
-        'turn on "macmail" in the Full Disk Access list (it should now appear). ' +
-        `If it isn't listed, click + and add this (the .app, not the inner binary): ${fdaGrantTarget()}. ` +
-        'Then re-run your command — no terminal restart needed.',
+        'switch on "macmail" in the Full Disk Access list, then re-run your command.',
     );
   } else {
     console.error(
-      'macmail: Full Disk Access required to read ~/Library/Mail. ' +
-        'Open System Settings → Privacy & Security → Full Disk Access and turn on "macmail" ' +
-        `(or click + and add this — the .app, not the inner binary: ${fdaGrantTarget()}).`,
+      'macmail: Full Disk Access required to read ~/Library/Mail. Run "macmail fda", ' +
+        'or open System Settings → Privacy & Security → Full Disk Access and switch on "macmail".',
     );
   }
   process.exit(2);
@@ -506,6 +503,32 @@ Examples:
       );
       process.stdout.write(out);
     });
+  });
+
+program
+  .command('fda')
+  .description('Grant Full Disk Access (one-time) — pops the dialog and opens Settings')
+  .addHelpText(
+    'after',
+    `
+Reading ~/Library/Mail needs Full Disk Access. This pops the grant dialog and
+opens System Settings → Full Disk Access; switch on "macmail" (find it by its
+icon). The grant follows macmail, so it then works from any terminal.`,
+  )
+  .option('--force', 'show the dialog even if access is already granted (to preview it)')
+  .action((opts) => {
+    if (!opts.force && canReadMailDir()) {
+      console.log(
+        'macmail: Full Disk Access is already granted ✓  (run `macmail fda --force` to preview the dialog)',
+      );
+      return;
+    }
+    const opened = promptFullDiskAccess({ force: true });
+    console.log(
+      opened
+        ? 'macmail: opened Full Disk Access — switch on "macmail" in the list, then re-run your read command.'
+        : 'macmail: open System Settings → Privacy & Security → Full Disk Access and switch on "macmail".',
+    );
   });
 
 program

@@ -536,24 +536,21 @@ source ~/.local/share/bash-completion/completions/macmail
 
 ## Full Disk Access (one-time)
 
-Reading `~/Library/Mail` is blocked by macOS until you grant Full Disk Access.
-The first read command pops a dialog with an **Open Settings** button.
+Reading `~/Library/Mail` needs Full Disk Access. Grant it once:
 
-**Grant FDA to `macmail` itself — not your terminal:**
+```bash
+macmail fda        # pops the dialog and opens Settings (any read command does too)
+```
 
-1. Run a read command once (e.g. `macmail triage`), then click **Open Settings**
-   in the dialog.
-2. Under **Full Disk Access**, turn **macmail** on — it appears in the list **by
-   name and icon**. (If it isn't listed yet, click **+** and add the app bundle
-   `~/.local/lib/macmail.app` — not the inner binary.)
-3. Done — no terminal restart needed.
+1. Run `macmail fda` and click **Open Settings**.
+2. Switch **macmail** on in the Full Disk Access list — spot it by its icon.
 
 macmail re-execs itself as its own TCC *responsible process* (codesign identity
 `kr.ikhoon.macmail`), so the grant is keyed to **macmail**, not the launching
-terminal — it shows up in the list to toggle and then works from any terminal
-(Terminal.app, iTerm, cmux, VS Code, …). After a rebuild/reinstall you may need
-to re-enable it. To opt out of the re-exec, set `MACMAIL_NO_DISCLAIM=1` (you'll
-then grant the terminal instead).
+terminal — it works from any terminal afterward (Terminal, iTerm, VS Code, …),
+and macmail already appears in the list by name and icon (no need to add it with
+**+**). After a rebuild/reinstall you may need to re-enable it. Set
+`MACMAIL_NO_DISCLAIM=1` to opt out of the re-exec and grant the terminal instead.
 
 ---
 

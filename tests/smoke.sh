@@ -49,12 +49,12 @@ else
 fi
 
 out=$("$MACMAIL" --help 2>&1)
-for sub in accounts mailboxes triage search read mark send reply completions; do
+for sub in accounts mailboxes triage search read mark send reply fda completions; do
   assert_match "--help lists '$sub'" "$sub" "$out"
 done
 
 # Per-subcommand --help
-for sub in accounts mailboxes triage search read mark send reply completions; do
+for sub in accounts mailboxes triage search read mark send reply fda completions; do
   out=$("$MACMAIL" "$sub" --help 2>&1)
   assert_match "macmail $sub --help works" "Usage" "$out"
 done

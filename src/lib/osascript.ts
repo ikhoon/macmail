@@ -81,23 +81,31 @@ export function fdaGrantTarget(): string {
  *  user should add in Privacy → Full Disk Access (the .app bundle when bundled).
  *  The grant follows macmail itself, so it works from any terminal
  *  (Terminal.app, iTerm, cmux, Warp, VS Code's integrated terminal, …). */
-function buildFdaDialogScript(targetPath: string): string {
-  const path = escapeForAppleScript(targetPath);
+function buildFdaDialogScript(iconClause: string): string {
   return `try
-  set msg to "macmail needs Full Disk Access to read Mail.app's local store at ~/Library/Mail.
+  set msg to "macmail needs Full Disk Access to read your mail (~/Library/Mail).
 
-1. Click \\"Open Settings\\" below
-2. In Full Disk Access, turn ON \\"macmail\\" (it should be listed).
-   If it isn't, click + and add this (the .app, not the inner binary):
-     ${path}
+Click \\"Open Settings\\", then switch \\"macmail\\" on in the list — it shows this icon.
 
-Once on, it works in every terminal (Terminal / iTerm / cmux / Warp / VS Code) — no restart, no per-app entries."
-  set btn to button returned of (display dialog msg buttons {"Cancel", "Open Settings"} default button "Open Settings" with title "macmail — Full Disk Access required" with icon caution)
+One-time: the grant follows macmail, so every terminal works."
+  set btn to button returned of (display dialog msg buttons {"Cancel", "Open Settings"} default button "Open Settings" with title "macmail — Full Disk Access" with icon ${iconClause})
   return btn
 on error
   return "Cancel"
 end try
 `;
+}
+
+/** AppleScript `with icon` clause: macmail's own app icon when running from the
+ *  bundle (so the dialog shows the same icon to look for in the list), else the
+ *  generic caution icon. */
+function fdaDialogIconClause(): string {
+  const target = fdaGrantTarget();
+  if (target.endsWith('.app')) {
+    const icns = join(target, 'Contents', 'Resources', 'macmail.icns');
+    if (existsSync(icns)) return `(POSIX file "${escapeForAppleScript(icns)}")`;
+  }
+  return 'caution';
 }
 
 /**
@@ -115,7 +123,7 @@ export function promptFullDiskAccess(opts?: { force?: boolean }): boolean {
     if (!process.stderr.isTTY) return false;
   }
   try {
-    const script = buildFdaDialogScript(fdaGrantTarget());
+    const script = buildFdaDialogScript(fdaDialogIconClause());
     const out = execFileSync('osascript', ['-e', script], {
       encoding: 'utf-8',
     }).trim();
