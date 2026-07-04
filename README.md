@@ -11,6 +11,10 @@
 
 <p align="center">
   <a href="https://github.com/ikhoon/macmail/actions/workflows/ci.yml"><img src="https://github.com/ikhoon/macmail/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/ikhoon/macmail/releases/latest"><img src="https://img.shields.io/github/v/release/ikhoon/macmail?sort=semver&color=2ea043" alt="Latest release"></a>
+  <a href="https://github.com/ikhoon/homebrew-tap"><img src="https://img.shields.io/badge/brew-ikhoon%2Ftap%2Fmacmail-f9a825?logo=homebrew&logoColor=white" alt="Homebrew"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/ikhoon/macmail?color=blue" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/macOS-Apple%20Silicon-000000?logo=apple&logoColor=white" alt="macOS · Apple Silicon">
 </p>
 
 <p align="center">
@@ -19,6 +23,15 @@
   <a href="https://github.com/ikhoon/macrec">macrec</a> (meeting recorder)</sub>
 </p>
 
+## Highlights
+
+- ⚡ **Instant on huge mailboxes** — millisecond reads over 100k+ messages via Mail's SQLite Envelope Index.
+- 🔌 **No cloud, no setup** — no Gmail API, no IMAP, no OAuth; reads work offline, even with Mail.app closed.
+- 🌏 **Decodes everything** — MIME, base64, quoted-printable; Korean and any other non-ASCII subject or body.
+- 🔎 **Real search** — subjects or full bodies, with sender / date / unread / flagged filters and snippets.
+- 🤖 **Built for scripts & LLMs** — `--json` (NDJSON) on every command; pipe straight into `jq` or an agent.
+- ✍️ **Safe writes** — `mark` / `send` / `reply` go through your own Mail.app; preview with `--dry-run`.
+
 ```console
 $ macmail triage --account Work --max 3
 2197647   CI Bot <ci@example.com>           Build #1242 failed: deploy …   2026-06-01T16:17:23+09:00
@@ -26,14 +39,7 @@ $ macmail triage --account Work --max 3
 2197588   Jira <jira@example.com>           [PROJ-1201] assigned to you     2026-06-01T14:02:10+09:00
 ```
 
-Reads go straight through Mail's local files (`~/Library/Mail`) — fast, and they
-work even when Mail.app is closed. Writes (`mark` / `send` / `reply`) go through
-Mail.app via AppleScript.
-
-- ⚡ **Fast** — finishes in milliseconds on 100k+-message stores (SQLite Envelope Index).
-- 🔌 **Works offline** — reading needs no Mail.app, no network, no API tokens.
-- 🌏 **Decodes everything** — MIME / base64 / quoted-printable, Korean and other non-ASCII subjects + bodies.
-- 🤖 **Scriptable** — `--json` (NDJSON) on every command, made for `jq` and LLM pipelines.
+Reads go straight through Mail's local files; writes go through Mail.app via AppleScript.
 
 ---
 
