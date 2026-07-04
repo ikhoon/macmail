@@ -412,14 +412,35 @@ describe('searchSubject filter bag', () => {
     expect(r.map((m) => m.id)).toEqual([101]);
   });
 
-  test('filter bag also applies through the view-mailbox labels arm', () => {
+  test('excludes deleted messages through the view-mailbox labels arm', () => {
     const r = env.searchSubject({
       mailboxUrlLike: '%gview@gmail.com/INBOX',
       max: 10,
-      filters: { sinceUnixSec: 802606150 }, // excludes 400 (100), includes 401 (200) — but 401 is "deleted"
+      filters: { sinceUnixSec: 802606150 }, // date-includes 401 (200), excludes 400 (100)
     });
-    // Note: searchSubject does not exclude deleted (no test fixture relies on it).
-    // 400 (100) excluded, 401 (200) survives.
-    expect(r.map((m) => m.id)).toEqual([401]);
+    // 400 excluded by date; 401 excluded because it's deleted (flags & 2).
+    expect(r.map((m) => m.id)).toEqual([]);
+  });
+
+  test('excludes deleted messages in a storage mailbox (source IS NULL)', () => {
+    // Message 401 ("Deleted draft") is in storage mailbox 4 with flags & 2.
+    const r = env.searchSubject({
+      mailboxUrlLike: '%gview@gmail.com/[Gmail]/All Mail',
+      query: 'Deleted draft',
+      max: 10,
+    });
+    expect(r.map((m) => m.id)).toEqual([]);
+  });
+
+  test('treats LIKE metacharacters in the query literally (escaped)', () => {
+    // No fixture subject contains "_" or "%"; unescaped, "_" is a single-char
+    // wildcard and "%" matches anything, so both would return every subject.
+    // Empty results prove the query is escaped.
+    expect(
+      env.searchSubject({ mailboxUrlLike: '%user@gmail.com/INBOX', query: '_', max: 10 }),
+    ).toEqual([]);
+    expect(
+      env.searchSubject({ mailboxUrlLike: '%user@gmail.com/INBOX', query: '%', max: 10 }),
+    ).toEqual([]);
   });
 });
