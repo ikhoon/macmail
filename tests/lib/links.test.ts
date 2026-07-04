@@ -28,4 +28,10 @@ describe('linkifyGitHub', () => {
     const s = 'A normal subject that mentions #5 without a repo';
     expect(linkifyGitHub(s)).toBe(s);
   });
+
+  it('only links when the [owner/repo] tag is at the start of the subject', () => {
+    setColorEnabled(true);
+    const s = 'Re: notes about [not/arepo] and #5';
+    expect(linkifyGitHub(s)).toBe(s);
+  });
 });

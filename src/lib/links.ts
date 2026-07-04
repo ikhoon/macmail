@@ -26,7 +26,9 @@ export function osc8(url: string, text: string): string {
  */
 export function linkifyGitHub(subject: string): string {
   if (!colorIsEnabled() || !subject) return subject;
-  const repo = subject.match(/\[([\w.-]+\/[\w.-]+)\]/)?.[1];
+  // GitHub notification subjects start with the "[owner/repo]" tag; anchoring to
+  // the start avoids false-positive links on unrelated "[a/b]" text elsewhere.
+  const repo = subject.match(/^\[([\w.-]+\/[\w.-]+)\]/)?.[1];
   if (!repo) return subject;
   return subject.replace(/(?:\b(PR|Issue) )?#(\d+)\b/g, (whole, kind: string | undefined, n: string) => {
     const path = kind === 'PR' ? 'pull' : 'issues';

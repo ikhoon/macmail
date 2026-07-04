@@ -4,6 +4,7 @@ import type { EnvelopeIndex, MailboxRow } from '../lib/envelope.ts';
 import { defaultEnvelopeIndexPath } from '../lib/mail-data.ts';
 import { EnvelopeIndex as EI } from '../lib/envelope.ts';
 import { formatRecords } from '../lib/output.ts';
+import { cyan } from '../lib/color.ts';
 
 export interface MailboxesOptions {
   json: boolean;
@@ -40,6 +41,7 @@ export function formatMailboxes(rows: MailboxRow[], opts: MailboxesOptions): str
       // Text mode shows just the short mailbox name (path tail of the URL);
       // JSON includes the full URL plus totals.
       fields: opts.json ? undefined : ['name'],
+      styles: { name: cyan },
     },
   );
 }
