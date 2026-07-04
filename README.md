@@ -11,29 +11,38 @@
 
 <p align="center">
   <a href="https://github.com/ikhoon/macmail/actions/workflows/ci.yml"><img src="https://github.com/ikhoon/macmail/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/ikhoon/macmail/releases/latest"><img src="https://img.shields.io/github/v/release/ikhoon/macmail?sort=semver&color=2ea043" alt="Latest release"></a>
+  <a href="https://github.com/ikhoon/homebrew-tap"><img src="https://img.shields.io/badge/brew-ikhoon%2Ftap%2Fmacmail-f9a825?logo=homebrew&logoColor=white" alt="Homebrew"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/ikhoon/macmail?color=blue" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/macOS-Apple%20Silicon-000000?logo=apple&logoColor=white" alt="macOS · Apple Silicon">
 </p>
 
-```console
-$ macmail triage --account Work --max 3
-2197647   CI Bot <ci@example.com>           Build #1242 failed: deploy …   2026-06-01T16:17:23+09:00
-2197621   GitHub <noreply@github.com>       PR #4823 review requested       2026-06-01T15:21:06+09:00
-2197588   Jira <jira@example.com>           [PROJ-1201] assigned to you     2026-06-01T14:02:10+09:00
-```
+<p align="center">
+  <sub>Part of the <code>mac*</code> family ·
+  <a href="https://github.com/ikhoon/maccal">maccal</a> (calendar) ·
+  <a href="https://github.com/ikhoon/macrec">macrec</a> (meeting recorder)</sub>
+</p>
 
-Reads go straight through Mail's local files (`~/Library/Mail`) — fast, and they
-work even when Mail.app is closed. Writes (`mark` / `send` / `reply`) go through
-Mail.app via AppleScript.
+## Highlights
 
-- ⚡ **Fast** — finishes in milliseconds on 100k+-message stores (SQLite Envelope Index).
-- 🔌 **Works offline** — reading needs no Mail.app, no network, no API tokens.
-- 🌏 **Decodes everything** — MIME / base64 / quoted-printable, Korean and other non-ASCII subjects + bodies.
-- 🤖 **Scriptable** — `--json` (NDJSON) on every command, made for `jq` and LLM pipelines.
+- ⚡ **Instant on huge mailboxes** — millisecond reads over 100k+ messages via Mail's SQLite Envelope Index.
+- 🔌 **No cloud, no setup** — no Gmail API, no IMAP, no OAuth; reads work offline, even with Mail.app closed.
+- 🌏 **Decodes everything** — MIME, base64, quoted-printable; Korean and any other non-ASCII subject or body.
+- 🔎 **Real search** — subjects or full bodies, with sender / date / unread / flagged filters and snippets.
+- 🤖 **Built for scripts & LLMs** — `--json` (NDJSON) on every command; pipe straight into `jq` or an agent.
+- ✍️ **Safe writes** — `mark` / `send` / `reply` go through your own Mail.app; preview with `--dry-run`.
+
+<p align="center">
+  <img src="assets/demo-cli.gif" alt="macmail CLI demo — triage, Korean search, read, and a safe --dry-run write" width="820">
+</p>
+
+Reads go straight through Mail's local files; writes go through Mail.app via AppleScript.
 
 ---
 
 ## Contents
 
-- [Install](#install) · [Full Disk Access](#full-disk-access-one-time)
+- [Install](#install)
 - [Quick start](#quick-start) — copy-paste cheat sheet
 - [Commands](#commands)
   - Read: [`accounts`](#accounts) · [`mailboxes`](#mailboxes) · [`triage`](#triage) · [`read`](#read) · [`search`](#search)
@@ -42,7 +51,7 @@ Mail.app via AppleScript.
 - [Scripting with JSON](#scripting-with-json)
 - [Shell completion](#shell-completion)
 - [Troubleshooting](#troubleshooting)
-- [How it works](#how-it-works) · [Development](#development)
+- [Full Disk Access](#full-disk-access-one-time) · [Privacy](#privacy) · [How it works](#how-it-works) · [Requirements](#requirements) · [Development](#development)
 
 ---
 
@@ -62,46 +71,9 @@ Download `macmail-<version>-macos-arm64.zip` from
 [Releases](https://github.com/ikhoon/macmail/releases), unzip it, and run
 `./install.sh` (it clears the download quarantine and installs the app).
 
-### From source
-
-Requires [Bun](https://bun.sh) 1.0+.
-
-```bash
-git clone https://github.com/ikhoon/macmail ~/src/macmail
-cd ~/src/macmail
-./install.sh
-```
-
-`install.sh` compiles a self-contained binary, packages it as a
-`~/.local/lib/macmail.app` bundle (so it shows up named + iconed in Full Disk
-Access), symlinks the bundle's executable to `~/.local/bin/macmail`, and installs
-shell completions. Make sure `~/.local/bin` is on your `PATH`:
-
-```bash
-which macmail        # → /Users/you/.local/bin/macmail
-macmail --help
-```
-
-### Full Disk Access (one-time)
-
-Reading `~/Library/Mail` is blocked by macOS until you grant Full Disk Access.
-The first read command pops a dialog with an **Open Settings** button.
-
-**Grant FDA to `macmail` itself — not your terminal:**
-
-1. Run a read command once (e.g. `macmail triage`), then click **Open Settings**
-   in the dialog.
-2. Under **Full Disk Access**, turn **macmail** on — it appears in the list **by
-   name and icon**. (If it isn't listed yet, click **+** and add the app bundle
-   `~/.local/lib/macmail.app` — not the inner binary.)
-3. Done — no terminal restart needed.
-
-macmail re-execs itself as its own TCC *responsible process* (codesign identity
-`kr.ikhoon.macmail`), so the grant is keyed to **macmail**, not the launching
-terminal — it shows up in the list to toggle and then works from any terminal
-(Terminal.app, iTerm, cmux, VS Code, …). After a rebuild/reinstall you may need
-to re-enable it. To opt out of the re-exec, set `MACMAIL_NO_DISCLAIM=1` (you'll
-then grant the terminal instead).
+> The first read command (e.g. `macmail triage`) pops a **Full Disk Access**
+> dialog with an **Open Settings** button — grant it once there (see
+> [Full Disk Access](#full-disk-access-one-time)).
 
 ---
 
@@ -562,6 +534,45 @@ source ~/.local/share/bash-completion/completions/macmail
 
 ---
 
+## Full Disk Access (one-time)
+
+Reading `~/Library/Mail` is blocked by macOS until you grant Full Disk Access.
+The first read command pops a dialog with an **Open Settings** button.
+
+**Grant FDA to `macmail` itself — not your terminal:**
+
+1. Run a read command once (e.g. `macmail triage`), then click **Open Settings**
+   in the dialog.
+2. Under **Full Disk Access**, turn **macmail** on — it appears in the list **by
+   name and icon**. (If it isn't listed yet, click **+** and add the app bundle
+   `~/.local/lib/macmail.app` — not the inner binary.)
+3. Done — no terminal restart needed.
+
+macmail re-execs itself as its own TCC *responsible process* (codesign identity
+`kr.ikhoon.macmail`), so the grant is keyed to **macmail**, not the launching
+terminal — it shows up in the list to toggle and then works from any terminal
+(Terminal.app, iTerm, cmux, VS Code, …). After a rebuild/reinstall you may need
+to re-enable it. To opt out of the re-exec, set `MACMAIL_NO_DISCLAIM=1` (you'll
+then grant the terminal instead).
+
+---
+
+## Privacy
+
+macmail is local-first by design — nothing about your mail leaves your machine.
+
+- **Reads never touch the network.** They go straight to Mail's local files
+  (`~/Library/Mail`) and its Envelope Index — no IMAP, no Gmail/API, no OAuth, no
+  cloud service, no telemetry.
+- **Writes use the Mail.app you're already signed into.** `send` / `reply` /
+  `mark` drive Mail via AppleScript, so macmail never handles your passwords,
+  tokens, or SMTP credentials.
+- **macmail keeps no store of your mail** — no database or cache of messages;
+  configuration is just environment variables. The only files it writes are the
+  shell completions you install and short-lived temp scripts for AppleScript writes.
+
+---
+
 ## How it works
 
 > Skip this unless you're curious or hacking on macmail.
@@ -583,6 +594,20 @@ message is an `.emlx` file under `~/Library/Mail/V<N>/<account-uuid>/<mailbox>.m
 with a SQLite "Envelope Index" of per-message metadata and flags. Reading those
 directly is fast and works even when Mail.app is closed — and it avoids Mail's
 AppleScript runtime, which crashes on body searches over a large inbox.
+
+**Design notes** — Mail.app quirks macmail is built around:
+
+- **Full Disk Access is keyed to macmail, not your terminal.** macmail re-execs
+  as its own TCC *responsible process* (codesign `kr.ikhoon.macmail`), so one
+  grant works from every terminal (Terminal, iTerm, VS Code, …).
+- **Reads never write.** macmail only *reads* the Envelope Index; every mutation
+  (`mark` / `send` / `reply`) goes through Mail.app, so Mail's own state stays
+  consistent and sends use your real authenticated account.
+- **View mailboxes resolve to storage.** Gmail-style label/view mailboxes are
+  mapped to the underlying `.mbox` so body reads find the actual `.emlx`.
+- **Uncached bodies are invisible.** Body search only sees messages whose `.emlx`
+  is on disk; Mail keeps some server-side until you open them once — a Mail
+  limitation, not a macmail bug.
 
 *Non-goals: maildir, IMAP, server-side rules, calendar/contacts.*
 
@@ -614,7 +639,39 @@ AppleScript runtime, which crashes on body searches over a large inbox.
 
 ---
 
+## Requirements
+
+- **Running it:** macOS on Apple Silicon (arm64), with **Mail.app set up and at
+  least one account** synced locally. Nothing else — reads need no network and no
+  tokens, and the binary is self-contained.
+- **Building from source:** [Bun](https://bun.sh) 1.0+ on macOS (for `codesign`
+  and the AppleScript write paths).
+
+---
+
 ## Development
+
+### Build & install from source
+
+Requires [Bun](https://bun.sh) 1.0+.
+
+```bash
+git clone https://github.com/ikhoon/macmail ~/src/macmail
+cd ~/src/macmail
+./install.sh
+```
+
+`install.sh` compiles a self-contained binary, packages it as a
+`~/.local/lib/macmail.app` bundle (so it shows up named + iconed in Full Disk
+Access), symlinks the bundle's executable to `~/.local/bin/macmail`, and installs
+shell completions. Make sure `~/.local/bin` is on your `PATH`:
+
+```bash
+which macmail        # → /Users/you/.local/bin/macmail
+macmail --help
+```
+
+### Working on it
 
 ```bash
 bun install              # fetch deps

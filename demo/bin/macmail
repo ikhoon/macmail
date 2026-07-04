@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Mock macmail for the demo GIF (see ../demo.tape). Prints fictional output and
+# never touches ~/Library/Mail, so the recording is safe to publish. It shadows
+# the real binary during recording because demo/bin is put first on PATH:
+#   PATH="$PWD/demo/bin:$PATH" vhs demo/demo.tape
+set -euo pipefail
+
+row() { printf '%-8s %-28s %-34s %s\n' "$1" "$2" "$3" "$4"; }
+
+case "${1:-}" in
+  triage)
+    row 2201455 "GitHub <noreply@github.com>" "[macmail] PR #58 review requested" "2026-07-04T09:12:41+09:00"
+    row 2201402 "Jira <jira@company.com>"     "[DX-1420] assigned to you"        "2026-07-04T08:47:10+09:00"
+    row 2201388 "CI Bot <ci@company.com>"     "Build #2287 passed on main"       "2026-07-04T08:31:55+09:00"
+    ;;
+  search)
+    # Korean query — shows non-ASCII decoding
+    printf '%-9s %s\n' 2201310 "김영희 <yhkim@company.com>   팀 워크숍 초대장 (7/18)   2026-07-03T18:22:05+09:00"
+    ;;
+  read)
+    cat <<'EOF'
+From:    Jira <jira@company.com>
+To:      you@company.com
+Date:    2026-07-04T08:47:10+09:00
+Subject: [DX-1420] assigned to you
+
+You've been assigned DX-1420 "Add --color to macmail output".
+EOF
+    ;;
+  mark)
+    echo "DRY-RUN: would mark message 2201455 (Work/INBOX) as read"
+    ;;
+  *)
+    echo "macmail: (demo mock) unhandled command: ${*:-}" >&2
+    exit 1
+    ;;
+esac
