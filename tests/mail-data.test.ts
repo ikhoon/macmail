@@ -236,6 +236,11 @@ describe('mailboxUrlToFsPath', () => {
     expect(mailboxUrlToFsPath('not-a-url', ROOT)).toBeNull();
     expect(mailboxUrlToFsPath('', ROOT)).toBeNull();
   });
+
+  test('rejects percent-encoded path traversal segments', () => {
+    expect(mailboxUrlToFsPath(`imap://${UUID}/%2e%2e`, ROOT)).toBeNull();
+    expect(mailboxUrlToFsPath(`imap://${UUID}/%2e%2e%2f%2e%2e%2fsecret`, ROOT)).toBeNull();
+  });
 });
 
 describe('accountIdFromMailboxUrl', () => {
