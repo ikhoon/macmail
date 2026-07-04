@@ -45,7 +45,7 @@ Reads go straight through Mail's local files; writes go through Mail.app via App
 
 ## Contents
 
-- [Install](#install) · [Full Disk Access](#full-disk-access-one-time)
+- [Install](#install)
 - [Quick start](#quick-start) — copy-paste cheat sheet
 - [Commands](#commands)
   - Read: [`accounts`](#accounts) · [`mailboxes`](#mailboxes) · [`triage`](#triage) · [`read`](#read) · [`search`](#search)
@@ -54,7 +54,7 @@ Reads go straight through Mail's local files; writes go through Mail.app via App
 - [Scripting with JSON](#scripting-with-json)
 - [Shell completion](#shell-completion)
 - [Troubleshooting](#troubleshooting)
-- [How it works](#how-it-works) · [Privacy](#privacy) · [Requirements](#requirements) · [Development](#development)
+- [Full Disk Access](#full-disk-access-one-time) · [Privacy](#privacy) · [How it works](#how-it-works) · [Requirements](#requirements) · [Development](#development)
 
 ---
 
@@ -74,46 +74,9 @@ Download `macmail-<version>-macos-arm64.zip` from
 [Releases](https://github.com/ikhoon/macmail/releases), unzip it, and run
 `./install.sh` (it clears the download quarantine and installs the app).
 
-### From source
-
-Requires [Bun](https://bun.sh) 1.0+.
-
-```bash
-git clone https://github.com/ikhoon/macmail ~/src/macmail
-cd ~/src/macmail
-./install.sh
-```
-
-`install.sh` compiles a self-contained binary, packages it as a
-`~/.local/lib/macmail.app` bundle (so it shows up named + iconed in Full Disk
-Access), symlinks the bundle's executable to `~/.local/bin/macmail`, and installs
-shell completions. Make sure `~/.local/bin` is on your `PATH`:
-
-```bash
-which macmail        # → /Users/you/.local/bin/macmail
-macmail --help
-```
-
-### Full Disk Access (one-time)
-
-Reading `~/Library/Mail` is blocked by macOS until you grant Full Disk Access.
-The first read command pops a dialog with an **Open Settings** button.
-
-**Grant FDA to `macmail` itself — not your terminal:**
-
-1. Run a read command once (e.g. `macmail triage`), then click **Open Settings**
-   in the dialog.
-2. Under **Full Disk Access**, turn **macmail** on — it appears in the list **by
-   name and icon**. (If it isn't listed yet, click **+** and add the app bundle
-   `~/.local/lib/macmail.app` — not the inner binary.)
-3. Done — no terminal restart needed.
-
-macmail re-execs itself as its own TCC *responsible process* (codesign identity
-`kr.ikhoon.macmail`), so the grant is keyed to **macmail**, not the launching
-terminal — it shows up in the list to toggle and then works from any terminal
-(Terminal.app, iTerm, cmux, VS Code, …). After a rebuild/reinstall you may need
-to re-enable it. To opt out of the re-exec, set `MACMAIL_NO_DISCLAIM=1` (you'll
-then grant the terminal instead).
+> The first read command (e.g. `macmail triage`) prompts once for **Full Disk
+> Access** — mostly automatic now; see [Full Disk Access](#full-disk-access-one-time)
+> if the grant needs a nudge.
 
 ---
 
@@ -574,6 +537,44 @@ source ~/.local/share/bash-completion/completions/macmail
 
 ---
 
+## Full Disk Access (one-time)
+
+Reading `~/Library/Mail` is blocked by macOS until you grant Full Disk Access.
+The first read command pops a dialog with an **Open Settings** button.
+
+**Grant FDA to `macmail` itself — not your terminal:**
+
+1. Run a read command once (e.g. `macmail triage`), then click **Open Settings**
+   in the dialog.
+2. Under **Full Disk Access**, turn **macmail** on — it appears in the list **by
+   name and icon**. (If it isn't listed yet, click **+** and add the app bundle
+   `~/.local/lib/macmail.app` — not the inner binary.)
+3. Done — no terminal restart needed.
+
+macmail re-execs itself as its own TCC *responsible process* (codesign identity
+`kr.ikhoon.macmail`), so the grant is keyed to **macmail**, not the launching
+terminal — it shows up in the list to toggle and then works from any terminal
+(Terminal.app, iTerm, cmux, VS Code, …). After a rebuild/reinstall you may need
+to re-enable it. To opt out of the re-exec, set `MACMAIL_NO_DISCLAIM=1` (you'll
+then grant the terminal instead).
+
+---
+
+## Privacy
+
+macmail is local-first by design — nothing about your mail leaves your machine.
+
+- **Reads never touch the network.** They go straight to Mail's local files
+  (`~/Library/Mail`) and its Envelope Index — no IMAP, no Gmail/API, no OAuth, no
+  cloud service, no telemetry.
+- **Writes use the Mail.app you're already signed into.** `send` / `reply` /
+  `mark` drive Mail via AppleScript, so macmail never handles your passwords,
+  tokens, or SMTP credentials.
+- **macmail stores nothing of its own** — no database, no cache; configuration is
+  just environment variables you set.
+
+---
+
 ## How it works
 
 > Skip this unless you're curious or hacking on macmail.
@@ -640,21 +641,6 @@ AppleScript runtime, which crashes on body searches over a large inbox.
 
 ---
 
-## Privacy
-
-macmail is local-first by design — nothing about your mail leaves your machine.
-
-- **Reads never touch the network.** They go straight to Mail's local files
-  (`~/Library/Mail`) and its Envelope Index — no IMAP, no Gmail/API, no OAuth, no
-  cloud service, no telemetry.
-- **Writes use the Mail.app you're already signed into.** `send` / `reply` /
-  `mark` drive Mail via AppleScript, so macmail never handles your passwords,
-  tokens, or SMTP credentials.
-- **macmail stores nothing of its own** — no database, no cache; configuration is
-  just environment variables you set.
-
----
-
 ## Requirements
 
 - **Running it:** macOS on Apple Silicon (arm64), with **Mail.app set up and at
@@ -666,6 +652,28 @@ macmail is local-first by design — nothing about your mail leaves your machine
 ---
 
 ## Development
+
+### Build & install from source
+
+Requires [Bun](https://bun.sh) 1.0+.
+
+```bash
+git clone https://github.com/ikhoon/macmail ~/src/macmail
+cd ~/src/macmail
+./install.sh
+```
+
+`install.sh` compiles a self-contained binary, packages it as a
+`~/.local/lib/macmail.app` bundle (so it shows up named + iconed in Full Disk
+Access), symlinks the bundle's executable to `~/.local/bin/macmail`, and installs
+shell completions. Make sure `~/.local/bin` is on your `PATH`:
+
+```bash
+which macmail        # → /Users/you/.local/bin/macmail
+macmail --help
+```
+
+### Working on it
 
 ```bash
 bun install              # fetch deps
