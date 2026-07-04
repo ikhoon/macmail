@@ -71,9 +71,9 @@ Download `macmail-<version>-macos-arm64.zip` from
 [Releases](https://github.com/ikhoon/macmail/releases), unzip it, and run
 `./install.sh` (it clears the download quarantine and installs the app).
 
-> The first read command (e.g. `macmail triage`) prompts once for **Full Disk
-> Access** — mostly automatic now; see [Full Disk Access](#full-disk-access-one-time)
-> if the grant needs a nudge.
+> The first read command (e.g. `macmail triage`) pops a **Full Disk Access**
+> dialog with an **Open Settings** button — grant it once there (see
+> [Full Disk Access](#full-disk-access-one-time)).
 
 ---
 
@@ -567,8 +567,9 @@ macmail is local-first by design — nothing about your mail leaves your machine
 - **Writes use the Mail.app you're already signed into.** `send` / `reply` /
   `mark` drive Mail via AppleScript, so macmail never handles your passwords,
   tokens, or SMTP credentials.
-- **macmail stores nothing of its own** — no database, no cache; configuration is
-  just environment variables you set.
+- **macmail keeps no store of your mail** — no database or cache of messages;
+  configuration is just environment variables. The only files it writes are the
+  shell completions you install and short-lived temp scripts for AppleScript writes.
 
 ---
 
