@@ -1,6 +1,7 @@
 // commands/send.ts — compose and send (or draft) a new message via AppleScript.
 
 import { join } from 'node:path';
+import { yellow } from '../lib/color.ts';
 import {
   ensureMailRunning,
   runAppleScript as defaultRunner,
@@ -53,7 +54,7 @@ export async function runSend(opts: SendOptions, deps: SendDeps): Promise<string
   const action = opts.draft ? 'create draft' : 'SEND';
 
   if (opts.dryRun) {
-    return `DRY-RUN: would ${action.toLowerCase()}\n${formatSendBody(opts)}`;
+    return `${yellow('DRY-RUN:')} would ${action.toLowerCase()}\n${formatSendBody(opts)}`;
   }
 
   process.stderr.write(formatSendPreview(opts, `About to ${action}`));

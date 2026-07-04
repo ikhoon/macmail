@@ -1,6 +1,7 @@
 // commands/mark.ts — mark a message read or unread via AppleScript.
 
 import { join } from 'node:path';
+import { yellow } from '../lib/color.ts';
 import {
   ensureMailRunning,
   runAppleScript as defaultRunner,
@@ -35,7 +36,7 @@ export function formatMarkPreview(opts: MarkOptions, verb = 'Mark'): string {
 
 export async function runMark(opts: MarkOptions, deps: MarkDeps): Promise<string> {
   if (opts.dryRun) {
-    return `DRY-RUN: would ${formatMarkPreview(opts, 'mark')}\n`;
+    return `${yellow('DRY-RUN:')} would ${formatMarkPreview(opts, 'mark')}\n`;
   }
   const confirmer = deps.confirmer ?? (opts.yes ? autoYesConfirmer : ttyConfirmer);
   const ok = await confirmer.prompt(`${formatMarkPreview(opts)}?`);

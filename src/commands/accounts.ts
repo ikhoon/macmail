@@ -3,6 +3,7 @@
 import type { Account } from '../lib/mail-data.ts';
 import { listAccounts } from '../lib/mail-data.ts';
 import { formatRecords } from '../lib/output.ts';
+import { cyan, dim, magenta } from '../lib/color.ts';
 
 export interface AccountsOptions {
   json: boolean;
@@ -21,6 +22,7 @@ export function formatAccounts(accts: Account[], opts: AccountsOptions): string 
       // Text mode shows the columns most useful for selecting an account.
       // JSON includes all fields, UUID included.
       fields: opts.json ? undefined : ['account', 'email', 'type'],
+      styles: { account: magenta, email: cyan, type: dim },
     },
   );
 }

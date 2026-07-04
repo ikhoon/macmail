@@ -3,6 +3,7 @@
 
 import { Command } from 'commander';
 import pkg from '../package.json';
+import { configureColor } from './lib/color.ts';
 import { canReadMailDir, promptFullDiskAccess, fdaGrantTarget } from './lib/osascript.ts';
 import {
   resolveAccountSelector,
@@ -108,6 +109,7 @@ program
   .name('macmail')
   .description('macOS Mail.app CLI — file-based reads, AppleScript writes')
   .version(pkg.version)
+  .option('--no-color', 'disable colored output (also honors the NO_COLOR env var)')
   .addHelpText(
     'after',
     `
@@ -137,6 +139,15 @@ Examples:
 The id in the first column of triage / search output is what you pass to
 read, mark, and reply. Run 'macmail <command> --help' for per-command flags.`,
   );
+
+// Colors are on by default on a TTY; turn them off with --no-color, NO_COLOR,
+// --json, or by piping. Resolve once before each command's action runs.
+program.hook('preAction', (thisCommand, actionCommand) => {
+  configureColor({
+    color: thisCommand.opts().color,
+    json: Boolean(actionCommand.opts().json),
+  });
+});
 
 program
   .command('accounts')
