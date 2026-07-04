@@ -43,7 +43,7 @@ describe('color gating', () => {
     configureColor({ json: true });
     expect(colorIsEnabled()).toBe(false);
 
-    process.env.NO_COLOR = '1';
+    process.env.NO_COLOR = ''; // presence-based: even an empty value disables
     configureColor({});
     expect(colorIsEnabled()).toBe(false);
     delete process.env.NO_COLOR;

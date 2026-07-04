@@ -22,7 +22,9 @@ export function configureColor(opts: { color?: boolean; json?: boolean } = {}): 
   enabled =
     opts.color !== false &&
     !opts.json &&
-    !process.env.NO_COLOR &&
+    // NO_COLOR is presence-based (https://no-color.org): any defined value,
+    // including an empty string, disables color.
+    !('NO_COLOR' in process.env) &&
     Boolean(process.stdout.isTTY);
 }
 
