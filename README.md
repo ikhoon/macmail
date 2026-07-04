@@ -13,6 +13,12 @@
   <a href="https://github.com/ikhoon/macmail/actions/workflows/ci.yml"><img src="https://github.com/ikhoon/macmail/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 </p>
 
+<p align="center">
+  <sub>Part of the <code>mac*</code> family ·
+  <a href="https://github.com/ikhoon/maccal">maccal</a> (calendar) ·
+  <a href="https://github.com/ikhoon/macrec">macrec</a> (meeting recorder)</sub>
+</p>
+
 ```console
 $ macmail triage --account Work --max 3
 2197647   CI Bot <ci@example.com>           Build #1242 failed: deploy …   2026-06-01T16:17:23+09:00
@@ -42,7 +48,7 @@ Mail.app via AppleScript.
 - [Scripting with JSON](#scripting-with-json)
 - [Shell completion](#shell-completion)
 - [Troubleshooting](#troubleshooting)
-- [How it works](#how-it-works) · [Development](#development)
+- [How it works](#how-it-works) · [Privacy](#privacy) · [Requirements](#requirements) · [Development](#development)
 
 ---
 
@@ -584,6 +590,20 @@ with a SQLite "Envelope Index" of per-message metadata and flags. Reading those
 directly is fast and works even when Mail.app is closed — and it avoids Mail's
 AppleScript runtime, which crashes on body searches over a large inbox.
 
+**Design notes** — Mail.app quirks macmail is built around:
+
+- **Full Disk Access is keyed to macmail, not your terminal.** macmail re-execs
+  as its own TCC *responsible process* (codesign `kr.ikhoon.macmail`), so one
+  grant works from every terminal (Terminal, iTerm, VS Code, …).
+- **Reads never write.** macmail only *reads* the Envelope Index; every mutation
+  (`mark` / `send` / `reply`) goes through Mail.app, so Mail's own state stays
+  consistent and sends use your real authenticated account.
+- **View mailboxes resolve to storage.** Gmail-style label/view mailboxes are
+  mapped to the underlying `.mbox` so body reads find the actual `.emlx`.
+- **Uncached bodies are invisible.** Body search only sees messages whose `.emlx`
+  is on disk; Mail keeps some server-side until you open them once — a Mail
+  limitation, not a macmail bug.
+
 *Non-goals: maildir, IMAP, server-side rules, calendar/contacts.*
 
 <details>
@@ -611,6 +631,31 @@ AppleScript runtime, which crashes on body searches over a large inbox.
   Mail.app is auto-launched on first use.
 
 </details>
+
+---
+
+## Privacy
+
+macmail is local-first by design — nothing about your mail leaves your machine.
+
+- **Reads never touch the network.** They go straight to Mail's local files
+  (`~/Library/Mail`) and its Envelope Index — no IMAP, no Gmail/API, no OAuth, no
+  cloud service, no telemetry.
+- **Writes use the Mail.app you're already signed into.** `send` / `reply` /
+  `mark` drive Mail via AppleScript, so macmail never handles your passwords,
+  tokens, or SMTP credentials.
+- **macmail stores nothing of its own** — no database, no cache; configuration is
+  just environment variables you set.
+
+---
+
+## Requirements
+
+- **Running it:** macOS on Apple Silicon (arm64), with **Mail.app set up and at
+  least one account** synced locally. Nothing else — reads need no network and no
+  tokens, and the binary is self-contained.
+- **Building from source:** [Bun](https://bun.sh) 1.0+ on macOS (for `codesign`
+  and the AppleScript write paths).
 
 ---
 
