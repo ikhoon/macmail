@@ -9,6 +9,7 @@ import {
   type Account,
 } from '../lib/mail-data.ts';
 import { formatRecords } from '../lib/output.ts';
+import { dim, cyan } from '../lib/color.ts';
 
 export interface TriageOptions {
   json: boolean;
@@ -58,7 +59,7 @@ export function formatTriage(
       row.date = m.dateReceived;
       return row;
     }),
-    { json: opts.json, fields },
+    { json: opts.json, fields, styles: { account: dim, sender: cyan, date: dim } },
   );
 }
 

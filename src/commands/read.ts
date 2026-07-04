@@ -5,6 +5,7 @@ import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
 import { parseEmlx, type ParsedEmlx } from '../lib/emlx.ts';
 import { toLocalISO } from '../lib/output.ts';
+import { dim } from '../lib/color.ts';
 
 export interface ReadOptions {
   json: boolean;
@@ -37,11 +38,11 @@ export async function findEmlxByName(root: string, target: string): Promise<stri
 
 export function formatHeaders(parsed: ParsedEmlx): string {
   return [
-    `From: ${parsed.from}`,
-    `To: ${parsed.to.join(', ')}`,
-    `Date: ${parsed.date ? toLocalISO(parsed.date) : ''}`,
-    `Subject: ${parsed.subject}`,
-    `Message-ID: ${parsed.messageId}`,
+    `${dim('From:')} ${parsed.from}`,
+    `${dim('To:')} ${parsed.to.join(', ')}`,
+    `${dim('Date:')} ${parsed.date ? toLocalISO(parsed.date) : ''}`,
+    `${dim('Subject:')} ${parsed.subject}`,
+    `${dim('Message-ID:')} ${parsed.messageId}`,
     '',
     '',
   ].join('\n');

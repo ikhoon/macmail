@@ -1,6 +1,7 @@
 // commands/reply.ts — reply (or reply-all) to a message via AppleScript.
 
 import { join } from 'node:path';
+import { yellow } from '../lib/color.ts';
 import {
   ensureMailRunning,
   runAppleScript as defaultRunner,
@@ -52,7 +53,7 @@ export async function runReply(opts: ReplyOptions, deps: ReplyDeps): Promise<str
   const action = opts.draft ? `draft ${kind}` : `SEND ${kind}`;
 
   if (opts.dryRun) {
-    return `DRY-RUN: would ${action.toLowerCase()}\n${formatReplyBody(opts)}`;
+    return `${yellow('DRY-RUN:')} would ${action.toLowerCase()}\n${formatReplyBody(opts)}`;
   }
 
   process.stderr.write(formatReplyPreview(opts, `About to ${action}`));

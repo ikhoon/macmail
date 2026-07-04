@@ -8,6 +8,10 @@ export interface FormatOptions {
   fields?: string[];
   /** Text-mode field separator. Defaults to TAB. */
   separator?: string;
+  /** Text-mode only: per-field styling fns (e.g. from lib/color). Each maps a
+   *  field name to a transform applied to that cell; missing fields are left
+   *  as-is. Ignored in JSON mode. */
+  styles?: Record<string, (s: string) => string>;
 }
 
 /** Render a Date as local-time ISO 8601 with offset, e.g.
@@ -39,7 +43,17 @@ export function formatRecords(rows: Row[], opts: FormatOptions): string {
   }
   const sep = opts.separator ?? '\t';
   const fields = opts.fields ?? Object.keys(rows[0] ?? {});
+  const styles = opts.styles;
   return (
-    rows.map((r) => fields.map((f) => stringifyCell(r[f])).join(sep)).join('\n') + '\n'
+    rows
+      .map((r) =>
+        fields
+          .map((f) => {
+            const cell = stringifyCell(r[f]);
+            return styles?.[f] ? styles[f](cell) : cell;
+          })
+          .join(sep),
+      )
+      .join('\n') + '\n'
   );
 }
