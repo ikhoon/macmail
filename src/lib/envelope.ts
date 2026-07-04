@@ -81,6 +81,12 @@ export interface EnvelopeFilters {
  *  filter bag plus an optional subject query. Returns conditions as raw
  *  strings (no user input) so the caller can join with `AND`; user input
  *  travels exclusively through `params`. */
+/** Escape LIKE metacharacters (`\` `%` `_`) so a user substring matches
+ *  literally. Pair with `ESCAPE '\'` on the LIKE clause. */
+function escapeLike(s: string): string {
+  return s.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
 function buildFilterClause(
   filters: EnvelopeFilters | undefined,
   subjectQuery?: string,
@@ -89,19 +95,19 @@ function buildFilterClause(
   const params: (string | number)[] = [];
 
   if (subjectQuery != null && subjectQuery !== '') {
-    conditions.push('s.subject LIKE ?');
-    params.push(`%${subjectQuery}%`);
+    conditions.push("s.subject LIKE ? ESCAPE '\\'");
+    params.push(`%${escapeLike(subjectQuery)}%`);
   }
   if (filters?.sender) {
-    const pat = `%${filters.sender.toLowerCase()}%`;
-    conditions.push('(LOWER(a.address) LIKE ? OR LOWER(a.comment) LIKE ?)');
+    const pat = `%${escapeLike(filters.sender.toLowerCase())}%`;
+    conditions.push("(LOWER(a.address) LIKE ? ESCAPE '\\' OR LOWER(a.comment) LIKE ? ESCAPE '\\')");
     params.push(pat, pat);
   }
   if (filters?.recipient) {
-    const pat = `%${filters.recipient.toLowerCase()}%`;
+    const pat = `%${escapeLike(filters.recipient.toLowerCase())}%`;
     conditions.push(
       'EXISTS (SELECT 1 FROM recipients r JOIN addresses ra ON r.address = ra.ROWID ' +
-        'WHERE r.message_id = m.ROWID AND LOWER(ra.address) LIKE ?)',
+        "WHERE r.message_id = m.ROWID AND LOWER(ra.address) LIKE ? ESCAPE '\\')",
     );
     params.push(pat);
   }
@@ -258,7 +264,7 @@ export class EnvelopeIndex {
        LEFT JOIN subjects  s ON m.subject = s.ROWID
        LEFT JOIN addresses a ON m.sender  = a.ROWID
        JOIN      mailboxes mb ON m.mailbox = mb.ROWID
-       WHERE mb.url LIKE ? AND mb.source IS NULL${extra}
+       WHERE mb.url LIKE ? AND mb.source IS NULL AND (m.flags & 2) = 0${extra}
        UNION ALL
        SELECT m.ROWID as id, s.subject as subject, a.address as senderAddress,
               a.comment as senderName, m.date_received as dateRecv,
@@ -268,7 +274,7 @@ export class EnvelopeIndex {
        JOIN      mailboxes mb ON l.mailbox_id = mb.ROWID
        LEFT JOIN subjects  s ON m.subject = s.ROWID
        LEFT JOIN addresses a ON m.sender  = a.ROWID
-       WHERE mb.url LIKE ? AND mb.source IS NOT NULL${extra}
+       WHERE mb.url LIKE ? AND mb.source IS NOT NULL AND (m.flags & 2) = 0${extra}
        ORDER BY dateRecv DESC
        LIMIT ?`;
     const params: (string | number)[] = [
