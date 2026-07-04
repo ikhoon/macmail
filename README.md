@@ -1,9 +1,17 @@
-# macmail
+<p align="center">
+  <img src="assets/macmail-logo.png" alt="macmail logo" width="160" height="160">
+</p>
 
-**A fast, scriptable CLI for macOS Mail.app.** Triage, search, read, and reply
-to your mail from the terminal — no Gmail API, no IMAP, no OAuth.
+<h1 align="center">macmail</h1>
 
-[![CI](https://github.com/ikhoon/macmail/actions/workflows/ci.yml/badge.svg)](https://github.com/ikhoon/macmail/actions/workflows/ci.yml)
+<p align="center">
+  <b>A fast, scriptable CLI for macOS Mail.app.</b><br>
+  Triage, search, read, and reply to your mail from the terminal — no Gmail API, no IMAP, no OAuth.
+</p>
+
+<p align="center">
+  <a href="https://github.com/ikhoon/macmail/actions/workflows/ci.yml"><img src="https://github.com/ikhoon/macmail/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+</p>
 
 ```console
 $ macmail triage --account Work --max 3
