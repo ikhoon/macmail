@@ -9,7 +9,8 @@ import {
   type Account,
 } from '../lib/mail-data.ts';
 import { formatRecords } from '../lib/output.ts';
-import { dim, cyan } from '../lib/color.ts';
+import { bold, cyan, green, magenta, yellow } from '../lib/color.ts';
+import { linkifyGitHub } from '../lib/links.ts';
 
 export interface TriageOptions {
   json: boolean;
@@ -59,7 +60,17 @@ export function formatTriage(
       row.date = m.dateReceived;
       return row;
     }),
-    { json: opts.json, fields, styles: { account: dim, sender: cyan, date: dim } },
+    {
+      json: opts.json,
+      fields,
+      styles: {
+        id: yellow,
+        account: magenta,
+        sender: cyan,
+        subject: (s) => bold(linkifyGitHub(s)),
+        date: green,
+      },
+    },
   );
 }
 

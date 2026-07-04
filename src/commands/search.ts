@@ -27,7 +27,8 @@ import {
   mailboxUrlToFsPath,
 } from '../lib/mail-data.ts';
 import { formatRecords } from '../lib/output.ts';
-import { dim, cyan } from '../lib/color.ts';
+import { bold, cyan, dim, green, yellow } from '../lib/color.ts';
+import { linkifyGitHub } from '../lib/links.ts';
 import { buildMailboxUrlPattern } from './triage.ts';
 import { parseEmlx } from '../lib/emlx.ts';
 
@@ -105,7 +106,17 @@ function formatRows(msgs: MessageSummary[], json: boolean): string {
         date: m.dateReceived,
         snippet: m.snippet,
       })),
-      { json: false, fields, styles: { sender: cyan, date: dim, snippet: dim } },
+      {
+        json: false,
+        fields,
+        styles: {
+          id: yellow,
+          sender: cyan,
+          subject: (s) => bold(linkifyGitHub(s)),
+          date: green,
+          snippet: dim,
+        },
+      },
     );
   }
   const blocks: string[] = [];
@@ -120,7 +131,17 @@ function formatRows(msgs: MessageSummary[], json: boolean): string {
           snippet: m.snippet,
         },
       ],
-      { json: false, fields, styles: { sender: cyan, date: dim, snippet: dim } },
+      {
+        json: false,
+        fields,
+        styles: {
+          id: yellow,
+          sender: cyan,
+          subject: (s) => bold(linkifyGitHub(s)),
+          date: green,
+          snippet: dim,
+        },
+      },
     ).trimEnd();
     blocks.push(m.text != null ? `${tsvRow}\n\n${m.text}\n` : `${tsvRow}\n`);
   }

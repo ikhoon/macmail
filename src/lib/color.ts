@@ -40,3 +40,5 @@ export const bold = wrap('\x1b[1m');
 export const yellow = wrap('\x1b[33m');
 export const cyan = wrap('\x1b[36m');
 export const green = wrap('\x1b[32m');
+export const magenta = wrap('\x1b[35m');
+export const blue = wrap('\x1b[34m');
