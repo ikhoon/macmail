@@ -128,6 +128,9 @@ Two kinds of commands:
 Common conventions:
 
 - `--json` on every command → **NDJSON** (one JSON object per line), for `jq`.
+- **Colored output** in a terminal — cyan senders, dim dates, a yellow `DRY-RUN`, and
+  clickable GitHub `PR #N` links. Off automatically when piped or with `--json`; disable
+  it explicitly with `--no-color` or the `NO_COLOR` env var.
 - `--account` / `--mailbox` default to `$MACMAIL_DEFAULT_ACCOUNT` / `$MACMAIL_DEFAULT_MAILBOX` (see [Configuration](#configuration)). On read commands (`triage` / `search`), an unset `--account` spans **all** accounts.
 - Write commands take `--dry-run` (preview) and `-y` / `--yes` (skip the confirmation prompt).
 
