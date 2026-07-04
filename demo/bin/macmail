@@ -1,34 +1,45 @@
 #!/usr/bin/env bash
-# Mock macmail for the demo GIF (see ../demo.tape). Prints fictional output and
-# never touches ~/Library/Mail, so the recording is safe to publish. It shadows
-# the real binary during recording because demo/bin is put first on PATH:
-#   PATH="$PWD/demo/bin:$PATH" vhs demo/demo.tape
+# Mock macmail for the demo GIF (see ../demo.tape). Prints fictional output with
+# the real color scheme baked in (yellow id, cyan sender, bold subject, green
+# date; dim labels for read; yellow DRY-RUN) so the recording shows macmail's
+# colored output. Never touches ~/Library/Mail. On PATH via demo/bin during
+# `vhs demo/demo.tape` so it shadows the real binary.
 set -euo pipefail
 
-row() { printf '%-8s %-28s %-34s %s\n' "$1" "$2" "$3" "$4"; }
+Y=$'\033[33m'  # id — yellow
+C=$'\033[36m'  # sender — cyan
+B=$'\033[1m'   # subject — bold
+G=$'\033[32m'  # date — green
+D=$'\033[2m'   # labels — dim
+R=$'\033[0m'
+
+# Pad each field to a fixed width first, then wrap it in color, so the ANSI
+# codes (zero-width in a terminal) don't throw the columns off.
+row() { # id sender subject date
+  printf '%s%-8s%s %s%-34s%s %s%-40s%s %s%s%s\n' \
+    "$Y" "$1" "$R" "$C" "$2" "$R" "$B" "$3" "$R" "$G" "$4" "$R"
+}
 
 case "${1:-}" in
   triage)
-    row 2201455 "GitHub <noreply@github.com>" "[macmail] PR #58 review requested" "2026-07-04T09:12:41+09:00"
-    row 2201402 "Jira <jira@company.com>"     "[DX-1420] assigned to you"        "2026-07-04T08:47:10+09:00"
-    row 2201388 "CI Bot <ci@company.com>"     "Build #2287 passed on main"       "2026-07-04T08:31:55+09:00"
+    row 2231677 "Copilot <notifications@github.com>" "[ikhoon/macrec] Realtime engine (PR #19)" "2026-07-04T21:12:05+09:00"
+    row 2231670 "Copilot <notifications@github.com>" "[ikhoon/macmail] Colored output (PR #6)" "2026-07-04T21:01:35+09:00"
+    row 2231402 "Jira <jira@company.com>"            "[DX-1420] assigned to you"               "2026-07-04T08:47:10+09:00"
     ;;
   search)
-    # Korean query — shows non-ASCII decoding
-    printf '%-9s %s\n' 2201310 "김영희 <yhkim@company.com>   팀 워크숍 초대장 (7/18)   2026-07-03T18:22:05+09:00"
+    # Korean query — shows non-ASCII decoding, same colors
+    printf '%s%-8s%s %s%s%s   %s%s%s   %s%s%s\n' \
+      "$Y" 2231310 "$R" "$C" "김영희 <yhkim@company.com>" "$R" "$B" "팀 워크숍 초대장 (7/18)" "$R" "$G" "2026-07-03T18:22:05+09:00" "$R"
     ;;
   read)
-    cat <<'EOF'
-From:    Jira <jira@company.com>
-To:      you@company.com
-Date:    2026-07-04T08:47:10+09:00
-Subject: [DX-1420] assigned to you
-
-You've been assigned DX-1420 "Add --color to macmail output".
-EOF
+    printf '%sFrom:%s    %sJira <jira@company.com>%s\n' "$D" "$R" "$C" "$R"
+    printf '%sTo:%s      you@company.com\n' "$D" "$R"
+    printf '%sDate:%s    %s2026-07-04T08:47:10+09:00%s\n' "$D" "$R" "$G" "$R"
+    printf '%sSubject:%s %s[DX-1420] assigned to you%s\n' "$D" "$R" "$B" "$R"
+    printf '\nYou'\''ve been assigned DX-1420 "Add --color to macmail output".\n'
     ;;
   mark)
-    echo "DRY-RUN: would mark message 2201455 (Work/INBOX) as read"
+    printf '%sDRY-RUN:%s would mark message 2231670 (Work/INBOX) as read\n' "$Y" "$R"
     ;;
   *)
     echo "macmail: (demo mock) unhandled command: ${*:-}" >&2
