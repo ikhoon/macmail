@@ -32,12 +32,9 @@
 - 🤖 **Built for scripts & LLMs** — `--json` (NDJSON) on every command; pipe straight into `jq` or an agent.
 - ✍️ **Safe writes** — `mark` / `send` / `reply` go through your own Mail.app; preview with `--dry-run`.
 
-```console
-$ macmail triage --account Work --max 3
-2197647   CI Bot <ci@example.com>           Build #1242 failed: deploy …   2026-06-01T16:17:23+09:00
-2197621   GitHub <noreply@github.com>       PR #4823 review requested       2026-06-01T15:21:06+09:00
-2197588   Jira <jira@example.com>           [PROJ-1201] assigned to you     2026-06-01T14:02:10+09:00
-```
+<p align="center">
+  <img src="assets/demo-cli.gif" alt="macmail CLI demo — triage, Korean search, read, and a safe --dry-run write" width="820">
+</p>
 
 Reads go straight through Mail's local files; writes go through Mail.app via AppleScript.
 
