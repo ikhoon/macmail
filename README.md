@@ -618,12 +618,15 @@ and macmail already appears in the list by name and icon (no need to add it with
 terminal instead.
 
 **The grant survives rebuilds.** `install.sh` signs macmail with a stable
-self-signed certificate (`scripts/make-signing-cert.sh` creates it once, backed
-up to `~/.config/macmail/MacmailSign.p12`), so the signature's Designated
-Requirement is certificate-based, not the per-build cdhash — you grant Full Disk
-Access **once** and it sticks across reinstalls. (Without the cert, install falls
-back to ad-hoc signing and you'd re-grant after each rebuild. Don't delete or
-regenerate the cert — that changes the requirement and you'd re-grant once.)
+self-signed certificate (`scripts/make-signing-cert.sh` creates it once), so the
+signature's Designated Requirement is certificate-based, not the per-build
+cdhash — you grant Full Disk Access **once** and it sticks across reinstalls.
+The private key lives only in your login keychain, usable by `codesign` alone —
+deliberately no file backup, since an on-disk key would let any local process
+sign itself as macmail and inherit the grant. Don't delete the keychain
+identity; if it's ever lost, re-run the script and re-grant FDA once. (Without
+the cert, install falls back to ad-hoc signing and you'd re-grant after each
+rebuild.)
 
 ---
 
@@ -639,10 +642,10 @@ macmail is local-first by design — nothing about your mail leaves your machine
   tokens, or SMTP credentials.
 - **macmail keeps no store of your mail** — no database or cache of messages;
   configuration is environment variables plus an optional
-  `~/.config/macmail/config.json` that macmail only reads. The files it writes:
-  the shell completions you install, short-lived temp scripts for AppleScript
-  writes, and (at install time) the signing-cert backup
-  `~/.config/macmail/MacmailSign.p12`.
+  `~/.config/macmail/config.json` that macmail only reads. The only files it
+  writes are the shell completions you install and short-lived temp scripts for
+  AppleScript writes. (The install-time signing key lives only in your login
+  keychain — no file backup.)
 
 ---
 
