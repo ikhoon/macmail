@@ -67,9 +67,10 @@ export function formatTriage(
   return formatRecords(
     msgs.map((m) => {
       const row: Record<string, unknown> = { id: m.id };
-      // Text shows the account email; JSON keeps the account name (a stable
-      // selector scripts pass to --account).
-      if (multiAccount) row.account = opts.json ? nameOf(m) : emailOf(m);
+      // Account column: the short account name/label by default (emails get
+      // long); --full shows the account email instead. JSON keeps the name (a
+      // stable selector scripts pass to --account).
+      if (multiAccount) row.account = !opts.json && opts.full ? emailOf(m) : nameOf(m);
       // JSON keeps the full sender (scripts need it); text shows a compact
       // name-only form unless --full is passed.
       row.sender =

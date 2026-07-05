@@ -129,34 +129,38 @@ describe('formatTriage account column', () => {
   ];
   const opts = { json: false, account: '', mailbox: 'INBOX', max: 10 };
 
-  test('text mode shows the account email when spanning accounts', () => {
-    const out = formatTriage(
-      [
-        msg(2, 'imap://AAAAAAAA-0000-0000-0000-000000000001/INBOX'),
-        msg(1, 'imap://BBBBBBBB-0000-0000-0000-000000000002/INBOX'),
-      ],
-      opts,
-      accounts,
-    );
-    const rows = out.trim().split('\n').map((l) => l.split(/ {2,}/));
+  const spanRows = [
+    msg(2, 'imap://AAAAAAAA-0000-0000-0000-000000000001/INBOX'),
+    msg(1, 'imap://BBBBBBBB-0000-0000-0000-000000000002/INBOX'),
+  ];
+
+  test('text mode shows the short account name by default', () => {
+    const rows = formatTriage(spanRows, opts, accounts)
+      .trim()
+      .split('\n')
+      .map((l) => l.split(/ {2,}/));
+    expect(rows[0][1]).toBe('Work');
+    expect(rows[1][1]).toBe('Personal');
+  });
+
+  test('--full shows the account email instead of the name', () => {
+    const rows = formatTriage(spanRows, { ...opts, full: true }, accounts)
+      .trim()
+      .split('\n')
+      .map((l) => l.split(/ {2,}/));
     expect(rows[0][1]).toBe('w@x.com');
     expect(rows[1][1]).toBe('p@x.com');
   });
 
-  test('falls back to the account name when it has no login email', () => {
+  test('--full falls back to the account name when it has no login email', () => {
     const noEmail: Account[] = [
       { uuid: 'AAAAAAAA-0000-0000-0000-000000000001', name: 'On My Mac', email: null, type: 'Local' },
       { uuid: 'BBBBBBBB-0000-0000-0000-000000000002', name: 'Personal', email: 'p@x.com', type: 'iCloud' },
     ];
-    const out = formatTriage(
-      [
-        msg(2, 'imap://AAAAAAAA-0000-0000-0000-000000000001/INBOX'),
-        msg(1, 'imap://BBBBBBBB-0000-0000-0000-000000000002/INBOX'),
-      ],
-      opts,
-      noEmail,
-    );
-    const rows = out.trim().split('\n').map((l) => l.split(/ {2,}/));
+    const rows = formatTriage(spanRows, { ...opts, full: true }, noEmail)
+      .trim()
+      .split('\n')
+      .map((l) => l.split(/ {2,}/));
     expect(rows[0][1]).toBe('On My Mac');
     expect(rows[1][1]).toBe('p@x.com');
   });

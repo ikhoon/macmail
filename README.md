@@ -197,9 +197,9 @@ $ macmail triage --account Work --max 3
 Columns: `date` (local time), `sender`, `subject`, `id` — date first for
 chronological scanning, `id` (what you pass to `read` / `mark` / `reply`) last,
 matching maccal. When the result spans more than one account, an `account`
-column is inserted after `date` — showing the account **email** (which address
-the message arrived at) so you can tell your inboxes apart. (`--json` keeps
-`account` as the account name.)
+column is inserted after `date` — the short **account name** (as in `macmail
+accounts`) so you can tell your inboxes apart; `--full` shows the account email
+instead. (`--json` keeps `account` as the account name.)
 
 ```bash
 macmail triage                          # unread INBOX across all accounts (or your default)
