@@ -191,7 +191,7 @@ Unread messages in a mailbox, newest first. Your morning inbox scan. With no
 ```console
 $ macmail triage --account Work --max 3
 2026-06-01 16:17  G/ci      CI Bot  Build #1242 failed: deploy …  2197647
-2026-06-01 15:21  G/github  GitHub  PR #4823 review requested     2197621
+2026-06-01 15:21  dev/bomnun  GitHub  PR #4823 review requested     2197621
 2026-06-01 14:02  INBOX     Jira    [PROJ-1201] assigned to you   2197588
 ```
 
@@ -202,7 +202,7 @@ column is inserted after `date` — the short **account name** (as in `macmail
 accounts`) so you can tell your inboxes apart; `--full` shows the account email
 instead. (`--json` keeps `account` as the account name.)
 
-When messages carry **Gmail-style labels** (e.g. `IMON/mdc-dev`, `G/github`), a
+When messages carry **Gmail-style labels** (e.g. `dev/bomnun`, `dev/bomnun`), a
 `mailbox` column appears after `account` showing them — so you can categorize at
 a glance. System mailboxes (`INBOX`, `[Gmail]/*`) are filtered out. `--json` adds
 a `labels` array per message.

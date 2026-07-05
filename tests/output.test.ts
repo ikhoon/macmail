@@ -95,7 +95,7 @@ describe('formatRecords', () => {
 describe('display helpers', () => {
   test('displayWidth counts CJK as 2, ANSI escapes as 0', () => {
     expect(displayWidth('ab')).toBe(2);
-    expect(displayWidth('엄')).toBe(2);
+    expect(displayWidth('한')).toBe(2);
     expect(displayWidth('\x1b[96mx\x1b[0m')).toBe(1);
   });
 

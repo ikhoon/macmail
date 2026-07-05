@@ -14,7 +14,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 
 export interface Account {
-  /** Mail V<N> UUID directory name (e.g. "DC1EB047-9021-45D6-A252-50FF783B0335"). */
+  /** Mail V<N> UUID directory name (e.g. "BBBBBBBB-1111-2222-3333-444444444444"). */
   uuid: string;
   /** Human-readable description from Accounts4 (e.g. "Work", "Personal", "On My Mac"). */
   name: string;
@@ -184,7 +184,7 @@ export function resolveAccountUuid(selector: string, accounts: Account[]): strin
 }
 
 /** Strip `scheme://authority/` from a Mail.app mailbox URL, leaving the decoded
- *  mailbox path (e.g. `imap://acct/IMON/mdc-dev` → `IMON/mdc-dev`). */
+ *  mailbox path (e.g. `imap://acct/dev/bomnun` → `dev/bomnun`). */
 export function shortMailboxName(url: string): string {
   const m = url.match(/^[^:]+:\/\/[^/]+\/(.*)$/);
   if (!m) return url;
@@ -234,7 +234,7 @@ export function mailboxUrlToFsPath(
 /**
  * Extract the account identifier from a mailbox URL — the authority component
  * of `scheme://<authority>/path`. For real Mail data this is the account's
- * UUID (`imap://DC1EB047-…/INBOX` → `DC1EB047-…`); in tests/fixtures it may be
+ * UUID (`imap://BBBBBBBB-…/INBOX` → `BBBBBBBB-…`); in tests/fixtures it may be
  * an email-style authority. Returns null when there's no authority.
  */
 export function accountIdFromMailboxUrl(url: string): string | null {

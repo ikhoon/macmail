@@ -38,7 +38,7 @@ describe('triage command', () => {
     // Columns are date · sender · subject · id (id last).
     const [first, second] = lines.map((l) => l.split(/ {2,}/));
     expect(first.at(-1)).toBe('102'); // newest unread — id is the last column
-    expect(first[2]).toBe('초대장: xDS server design');
+    expect(first[2]).toBe('초대장: 봄맞이 다과회');
     expect(second.at(-1)).toBe('101');
   });
 
@@ -74,7 +74,7 @@ describe('triage command', () => {
     });
     const obj = JSON.parse(out.trim());
     expect(obj.id).toBe(102);
-    expect(obj.subject).toBe('초대장: xDS server design');
+    expect(obj.subject).toBe('초대장: 봄맞이 다과회');
     expect(typeof obj.date).toBe('string');
     expect(obj.date).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
@@ -215,12 +215,12 @@ describe('formatTriage mailbox (labels) column', () => {
   const opts = { json: false, account: '', mailbox: 'INBOX', max: 10 };
 
   test('adds a mailbox column when any message has user labels', () => {
-    const out = formatTriage([withLabels(2, ['G/github']), withLabels(1)], opts);
+    const out = formatTriage([withLabels(2, ['dev/bomnun']), withLabels(1)], opts);
     // date · mailbox · sender · subject · id — the labeled row shows its label
     // in the mailbox column (index 1). (A label-less row's empty cell collapses
     // when split on runs of spaces, so we only assert the labeled row.)
     const first = out.trim().split('\n')[0].split(/ {2,}/);
-    expect(first[1]).toBe('G/github');
+    expect(first[1]).toBe('dev/bomnun');
     expect(first).toHaveLength(5);
   });
 
@@ -231,9 +231,9 @@ describe('formatTriage mailbox (labels) column', () => {
   });
 
   test('JSON carries a labels array, not a mailbox string', () => {
-    const out = formatTriage([withLabels(2, ['G/github', 'MIRROR'])], { ...opts, json: true });
+    const out = formatTriage([withLabels(2, ['dev/bomnun', 'news/weekly'])], { ...opts, json: true });
     const obj = JSON.parse(out.trim());
-    expect(obj.labels).toEqual(['G/github', 'MIRROR']);
+    expect(obj.labels).toEqual(['dev/bomnun', 'news/weekly']);
     expect(obj.mailbox).toBeUndefined();
   });
 });

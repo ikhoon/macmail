@@ -67,7 +67,7 @@ export function buildEnvelopeFixture(): Database {
     INSERT INTO subjects (ROWID, subject) VALUES
       (1, 'Welcome'),
       (2, 'Meeting at noon'),
-      (3, '초대장: xDS server design'),
+      (3, '초대장: 봄맞이 다과회'),
       (4, '[Jira] FOO-123 updated'),
       (5, 'Gmail labelled note'),
       (6, 'Deleted draft');

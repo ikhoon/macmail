@@ -196,8 +196,8 @@ describe('readViaIndex (indexed fast path)', () => {
 
 describe('shardDirsForId (V10 id-sharded layout)', () => {
   test('digits of floor(id/1000), most-significant last', () => {
-    expect(shardDirsForId(2232315)).toEqual(['2', '3', '2', '2']); // observed on a real store
-    expect(shardDirsForId(2231914)).toEqual(['1', '3', '2', '2']);
+    expect(shardDirsForId(4821736)).toEqual(['1', '2', '8', '4']);
+    expect(shardDirsForId(4821052)).toEqual(['1', '2', '8', '4']);
     expect(shardDirsForId(12345)).toEqual(['2', '1']);
   });
   test('ids under 1000 have no shard dirs', () => {
@@ -210,24 +210,24 @@ describe('readViaIndex sharded fast path', () => {
   let env: EnvelopeIndex;
   let tmpRoot: string;
   const opts = { json: false, headers: false, html: false };
-  const UUID = '1481846F-CCC9-4B9E-B0E7-B8B3F4FBD46F';
+  const UUID = 'CCCCCCCC-1111-2222-3333-444444444444';
 
   beforeAll(() => {
     const db = buildEnvelopeFixture();
     // A large-id message in storage mailbox 1 to exercise the shard dirs.
     db.exec(
       `INSERT INTO messages (ROWID, sender, subject, mailbox, date_received, flags)
-       VALUES (2232315, 1, 1, 1, 802700000, 0);`,
+       VALUES (4821736, 1, 1, 1, 802700000, 0);`,
     );
     env = new EnvelopeIndex(db);
     tmpRoot = mkdtempSync(join(tmpdir(), 'macmail-shard-'));
     // Real V10 layout: <mbox>/<envelope-uuid>/Data/<shards…>/Messages/<id>.emlx
     const dir = join(
       tmpRoot, 'user@gmail.com', 'INBOX.mbox', UUID,
-      'Data', '2', '3', '2', '2', 'Messages',
+      'Data', '1', '2', '8', '4', 'Messages',
     );
     mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, '2232315.emlx'), buildEmlx('From: a@x.com\n\nsharded body'));
+    writeFileSync(join(dir, '4821736.emlx'), buildEmlx('From: a@x.com\n\nsharded body'));
   });
   afterAll(() => {
     env.close();
@@ -235,7 +235,7 @@ describe('readViaIndex sharded fast path', () => {
   });
 
   test('computes the sharded path directly and reads the message', async () => {
-    const out = await readViaIndex(2232315, opts, env, tmpRoot);
+    const out = await readViaIndex(4821736, opts, env, tmpRoot);
     expect(out).toContain('sharded body');
   });
 });
@@ -244,7 +244,7 @@ describe('.partial.emlx support (recent messages)', () => {
   let env: EnvelopeIndex;
   let tmpRoot: string;
   const opts = { json: false, headers: false, html: false };
-  const UUID = '1481846F-CCC9-4B9E-B0E7-B8B3F4FBD46F';
+  const UUID = 'CCCCCCCC-1111-2222-3333-444444444444';
 
   beforeAll(() => {
     const db = buildEnvelopeFixture();

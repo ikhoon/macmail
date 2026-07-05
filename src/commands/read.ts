@@ -106,8 +106,8 @@ const UUID_DIR =
   /^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$/;
 
 /** Mail V10 shards message files by id: the shard directories under `Data/`
- *  are the digits of floor(id/1000), most-significant last — e.g. id 2232315
- *  → Data/2/3/2/2/Messages/2232315.emlx, and ids < 1000 sit directly under
+ *  are the digits of floor(id/1000), most-significant last — e.g. id 4821736
+ *  → Data/1/2/8/4/Messages/4821736.emlx, and ids < 1000 sit directly under
  *  Data/Messages/. */
 export function shardDirsForId(id: number): string[] {
   const bucket = Math.floor(id / 1000);
