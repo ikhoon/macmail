@@ -2,7 +2,9 @@ import { describe, expect, test, beforeAll, afterAll } from 'bun:test';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { findEmlxByName, runReadUnderRoot, formatRead } from '../../src/commands/read.ts';
+import { findEmlxByName, runReadUnderRoot, formatRead, readViaIndex } from '../../src/commands/read.ts';
+import { EnvelopeIndex } from '../../src/lib/envelope.ts';
+import { buildEnvelopeFixture } from '../helpers/envelope-fixture.ts';
 import { parseEmlx, type ParsedEmlx } from '../../src/lib/emlx.ts';
 
 function buildEmlx(rfc822: string, flags: number = 0): Buffer {
@@ -149,5 +151,39 @@ describe('runReadUnderRoot integration', () => {
     await expect(
       runReadUnderRoot(99999, root, { json: false, headers: false, html: false }),
     ).rejects.toThrow(/not found/);
+  });
+});
+
+describe('readViaIndex (indexed fast path)', () => {
+  let env: EnvelopeIndex;
+  let tmpRoot: string;
+  const opts = { json: false, headers: false, html: false };
+
+  beforeAll(() => {
+    env = new EnvelopeIndex(buildEnvelopeFixture());
+    tmpRoot = mkdtempSync(join(tmpdir(), 'macmail-rvi-'));
+    // Fixture message 100 lives in storage mailbox 'imap://user@gmail.com/INBOX'
+    // → <root>/user@gmail.com/INBOX.mbox/…; only that subtree gets the file.
+    const dir = join(tmpRoot, 'user@gmail.com', 'INBOX.mbox', 'Data', '0', 'Messages');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, '100.emlx'), buildEmlx('From: alice@example.com\n\nindexed body'));
+  });
+  afterAll(() => {
+    env.close();
+    rmSync(tmpRoot, { recursive: true, force: true });
+  });
+
+  test('resolves the storage mailbox and reads only that subtree', async () => {
+    const out = await readViaIndex(100, opts, env, tmpRoot);
+    expect(out).toContain('indexed body');
+  });
+
+  test('returns null for an id the index does not know (caller falls back)', async () => {
+    expect(await readViaIndex(999999, opts, env, tmpRoot)).toBeNull();
+  });
+
+  test('returns null when the .emlx is not on disk (cached-miss)', async () => {
+    // Message 101 is in the index (same mailbox) but has no file under tmpRoot.
+    expect(await readViaIndex(101, opts, env, tmpRoot)).toBeNull();
   });
 });

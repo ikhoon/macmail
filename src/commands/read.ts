@@ -7,6 +7,12 @@ import { parseEmlx, type ParsedEmlx } from '../lib/emlx.ts';
 import { formatDate } from '../lib/output.ts';
 import { bold, cyan, dim, green } from '../lib/color.ts';
 import { linkifyGitHub } from '../lib/links.ts';
+import { EnvelopeIndex } from '../lib/envelope.ts';
+import {
+  defaultEnvelopeIndexPath,
+  findMailVersionDir,
+  mailboxUrlToFsPath,
+} from '../lib/mail-data.ts';
 
 export interface ReadOptions {
   json: boolean;
@@ -82,6 +88,41 @@ export async function runReadUnderRoot(
   return formatRead(parsed, opts);
 }
 
+/**
+ * Fast path: resolve the message's storage mailbox via the Envelope Index and
+ * walk only that subtree — instead of the whole ~/Library/Mail store. Returns
+ * null when the index doesn't know the message or the file isn't on disk (the
+ * caller falls back to the full walk).
+ */
+export async function readViaIndex(
+  id: number,
+  opts: ReadOptions,
+  env: EnvelopeIndex,
+  mailVersionDir: string,
+): Promise<string | null> {
+  const m = env.findMessage(id);
+  if (!m) return null;
+  const fsRoot = mailboxUrlToFsPath(m.mailboxUrl, mailVersionDir);
+  if (!fsRoot) return null;
+  const path = await findEmlxByName(fsRoot, `${id}.emlx`);
+  if (!path) return null;
+  const parsed = await parseEmlx(path, { id });
+  return formatRead(parsed, opts);
+}
+
 export async function runRead(id: number, opts: ReadOptions): Promise<string> {
+  // Try the indexed fast path; any index hiccup (missing DB, stale row, moved
+  // file) falls back to the exhaustive walk that always worked.
+  try {
+    const env = new EnvelopeIndex(defaultEnvelopeIndexPath());
+    try {
+      const out = await readViaIndex(id, opts, env, findMailVersionDir());
+      if (out != null) return out;
+    } finally {
+      env.close();
+    }
+  } catch {
+    // fall through to the full walk
+  }
   return runReadUnderRoot(id, join(homedir(), 'Library', 'Mail'), opts);
 }
