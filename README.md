@@ -460,6 +460,34 @@ commands (`triage`, `search`) span **all** accounts, and `triage` adds an
 (`mark`, `reply`) can't act on "all accounts", so they require an explicit
 `--account` (or the env var).
 
+### Config file
+
+For settings you'd otherwise repeat, drop a JSON file at
+`~/.config/macmail/config.json` (or `$XDG_CONFIG_HOME/macmail/config.json`, or a
+path in `$MACMAIL_CONFIG`):
+
+```json
+{
+  "defaultAccount": "Work",
+  "defaultMailbox": "INBOX",
+  "color": "auto",
+  "full": false
+}
+```
+
+| Key | Meaning |
+|---|---|
+| `defaultAccount` | default `--account` selector (name / email / UUID) |
+| `defaultMailbox` | default `--mailbox` |
+| `color` | `"auto"` (color on a TTY — default), `"always"`, or `"never"` |
+| `full` | default for `--full` (show the full `Name <email>` sender) |
+
+Every value is a **default** — precedence is **flag > env var > config file >
+built-in**. So `MACMAIL_DEFAULT_ACCOUNT` overrides `defaultAccount`, and a flag
+overrides both (`--no-color` / `--no-full` beat `"color": "always"` / `"full":
+true`). A missing file is fine (you get the built-ins); unknown keys are ignored;
+a malformed file is skipped with a warning.
+
 ---
 
 ## Scripting with JSON

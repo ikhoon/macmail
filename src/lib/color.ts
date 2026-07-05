@@ -15,17 +15,21 @@ const wrap =
 
 /**
  * Decide whether to colorize, once per command before output.
- * On only when: not `--no-color` (color !== false), not `--json`, NO_COLOR
- * unset, and stdout is a TTY (so piped/redirected output stays clean).
+ * `--no-color` (color === false), `NO_COLOR`, and `--json` force it OFF. Then
+ * `mode` (from the config file) decides: "always" → on, "never" → off,
+ * "auto"/unset → on only when stdout is a TTY (piped/redirected stays clean).
  */
-export function configureColor(opts: { color?: boolean; json?: boolean } = {}): void {
-  enabled =
-    opts.color !== false &&
-    !opts.json &&
-    // NO_COLOR is presence-based (https://no-color.org): any defined value,
-    // including an empty string, disables color.
-    !('NO_COLOR' in process.env) &&
-    Boolean(process.stdout.isTTY);
+export function configureColor(
+  opts: { color?: boolean; json?: boolean; mode?: string } = {},
+): void {
+  // NO_COLOR is presence-based (https://no-color.org): any defined value,
+  // including an empty string, disables color.
+  if (opts.color === false || opts.json || 'NO_COLOR' in process.env) {
+    enabled = false;
+    return;
+  }
+  const mode = (opts.mode ?? 'auto').toLowerCase();
+  enabled = mode === 'always' ? true : mode === 'never' ? false : Boolean(process.stdout.isTTY);
 }
 
 /** Force the flag on/off (for tests). */
