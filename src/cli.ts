@@ -8,8 +8,10 @@ import { configureDateStyle } from './lib/output.ts';
 import { loadConfigOrWarn } from './lib/config.ts';
 import { canReadMailDir, promptFullDiskAccess } from './lib/osascript.ts';
 import {
+  listAccounts,
   resolveAccountSelector,
   resolveAccountSelectorVerbose,
+  type Account,
   type AccountResolution,
 } from './lib/mail-data.ts';
 import { runAccounts } from './commands/accounts.ts';
@@ -360,13 +362,25 @@ YYYY-MM-DD, MM-DD, or a token (today/yesterday/Nd/Nw) at local midnight.`,
       body,
       full: opts.full ?? CONFIG.full ?? false,
     });
+    // Account labels for the multi-account column — a nicety; fall back to
+    // URL-derived ids when the account list can't be read.
+    let accounts: Account[] = [];
+    try {
+      accounts = listAccounts();
+    } catch {
+      // ignore — rows will show raw URL authorities instead of names
+    }
     process.stdout.write(
-      formatSearchOutput(outcome, {
-        json: !!opts.json,
-        max,
-        countOnly: !!opts.countOnly,
-        full: opts.full ?? CONFIG.full ?? false,
-      }),
+      formatSearchOutput(
+        outcome,
+        {
+          json: !!opts.json,
+          max,
+          countOnly: !!opts.countOnly,
+          full: opts.full ?? CONFIG.full ?? false,
+        },
+        accounts,
+      ),
     );
   });
 

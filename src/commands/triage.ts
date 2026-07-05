@@ -5,16 +5,10 @@ import { EnvelopeIndex as EI } from '../lib/envelope.ts';
 import {
   defaultEnvelopeIndexPath,
   listAccounts,
-  accountIdFromMailboxUrl,
-  shortMailboxName,
   type Account,
 } from '../lib/mail-data.ts';
-import { formatRecords, senderDisplayName, truncateWidth } from '../lib/output.ts';
-import { blue, bold, cyan, green, magenta, yellow } from '../lib/color.ts';
-import { linkifyGitHub } from '../lib/links.ts';
-
-/** Max display width for the (name-only) sender column in text mode. */
-const SENDER_WIDTH = 28;
+import { formatRecords } from '../lib/output.ts';
+import { buildMessageRows } from '../lib/message-rows.ts';
 
 export interface TriageOptions {
   json: boolean;
@@ -35,86 +29,20 @@ export function buildMailboxUrlPattern(account: string, mailbox: string): string
   return `%${account}%/${mailbox}`;
 }
 
-/** A mailbox URL → a per-account label from a UUID→label map, falling back to
- *  the raw authority (already readable for email-style fixtures / unenriched
- *  accounts). Used for the account name (JSON) and the account email (text). */
-function accountLabel(url: string, labelById: Map<string, string>): string {
-  const id = accountIdFromMailboxUrl(url);
-  if (!id) return '';
-  return labelById.get(id.toUpperCase()) || id;
-}
-
 export function formatTriage(
   msgs: MessageSummary[],
   opts: TriageOptions,
   accounts: Account[] = [],
 ): string {
-  const nameById = new Map(accounts.map((a) => [a.uuid.toUpperCase(), a.name]));
-  // Email per account for the text view ("which address did this arrive at");
-  // falls back to the name when Accounts4 has no login email (local accounts).
-  const emailById = new Map(
-    accounts.map((a) => [a.uuid.toUpperCase(), a.email ?? a.name]),
-  );
-  const nameOf = (m: MessageSummary) => accountLabel(m.mailboxUrl, nameById);
-  const emailOf = (m: MessageSummary) => accountLabel(m.mailboxUrl, emailById);
-  // Only surface the account column when the result actually spans more than
-  // one account — keyed on the account UUID so it's independent of the label.
-  const idOf = (m: MessageSummary) =>
-    accountIdFromMailboxUrl(m.mailboxUrl)?.toUpperCase() ?? '';
-  const multiAccount = new Set(msgs.map(idOf)).size > 1;
-  // Show the mailbox (Gmail label) column when any message carries a user
-  // label — lets you categorize at a glance (e.g. IMON/mdc-dev).
-  const anyLabels = msgs.some((m) => (m.labels?.length ?? 0) > 0);
-  const fields = [
-    'date',
-    ...(multiAccount ? ['account'] : []),
-    ...(anyLabels ? ['mailbox'] : []),
-    'sender',
-    'subject',
-    'id',
-  ];
-  return formatRecords(
-    msgs.map((m) => {
-      const row: Record<string, unknown> = { id: m.id };
-      // Account column: the short account name/label by default (emails get
-      // long); --full shows the account email instead. JSON keeps the name (a
-      // stable selector scripts pass to --account).
-      if (multiAccount) row.account = !opts.json && opts.full ? emailOf(m) : nameOf(m);
-      // JSON carries the labels array (for scripts); text joins them into the
-      // mailbox column.
-      if (opts.json) {
-        if (m.labels?.length) row.labels = m.labels;
-      } else if (anyLabels) {
-        // Labelled → the label(s); otherwise the base mailbox (e.g. INBOX) so
-        // the cell isn't blank for uncategorized mail.
-        row.mailbox = m.labels?.length
-          ? m.labels.join(', ')
-          : shortMailboxName(m.mailboxUrl);
-      }
-      // JSON keeps the full sender (scripts need it); text shows a compact
-      // name-only form unless --full is passed.
-      row.sender =
-        opts.json || opts.full
-          ? m.sender
-          : truncateWidth(senderDisplayName(m.sender), SENDER_WIDTH);
-      row.subject = m.subject;
-      row.date = m.dateReceived;
-      return row;
-    }),
-    {
-      json: opts.json,
-      fields,
-      align: true,
-      styles: {
-        id: yellow,
-        account: magenta,
-        mailbox: blue,
-        sender: cyan,
-        subject: (s) => bold(linkifyGitHub(s)),
-        date: green,
-      },
-    },
-  );
+  // Column set, contents, and styling are shared with `search` — see
+  // lib/message-rows.ts for the layout rules.
+  const plan = buildMessageRows(msgs, { json: opts.json, full: opts.full }, accounts);
+  return formatRecords(plan.rows, {
+    json: opts.json,
+    fields: plan.fields,
+    align: true,
+    styles: plan.styles,
+  });
 }
 
 export function runTriage(

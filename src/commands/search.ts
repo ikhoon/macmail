@@ -25,15 +25,12 @@ import {
   defaultEnvelopeIndexPath,
   findMailVersionDir,
   mailboxUrlToFsPath,
+  type Account,
 } from '../lib/mail-data.ts';
-import { formatRecords, senderDisplayName, truncateWidth } from '../lib/output.ts';
-import { bold, cyan, dim, green, yellow } from '../lib/color.ts';
-import { linkifyGitHub } from '../lib/links.ts';
+import { formatRecords } from '../lib/output.ts';
+import { buildMessageRows } from '../lib/message-rows.ts';
 import { buildMailboxUrlPattern } from './triage.ts';
 import { parseEmlx } from '../lib/emlx.ts';
-
-/** Max display width for the (name-only) sender column in text mode. */
-const SENDER_WIDTH = 28;
 
 export type SearchScope = 'subject' | 'body' | 'both';
 
@@ -78,57 +75,25 @@ export interface SearchOutcome {
   examined?: number;
 }
 
-function formatRows(msgs: MessageSummary[], json: boolean, full = false): string {
-  if (json) {
-    return formatRecords(
-      msgs.map((m) => {
-        const base: Record<string, unknown> = {
-          id: m.id,
-          sender: m.sender,
-          subject: m.subject,
-          date: m.dateReceived,
-        };
-        if (m.snippet) base.snippet = m.snippet;
-        if (m.text != null) base.text = m.text;
-        return base;
-      }),
-      { json: true },
-    );
+function formatRows(
+  msgs: MessageSummary[],
+  opts: { json: boolean; full?: boolean },
+  accounts: Account[] = [],
+): string {
+  // Column set, contents, and styling are shared with `triage` — see
+  // lib/message-rows.ts for the layout rules.
+  const plan = buildMessageRows(msgs, { json: opts.json, full: opts.full }, accounts);
+  const fmt = { json: opts.json, fields: plan.fields, align: true, styles: plan.styles };
+  if (opts.json || !msgs.some((m) => m.text != null)) {
+    return formatRecords(plan.rows, fmt);
   }
-  // Text mode: aligned columns. When a body is attached, drop it on the next
-  // block separated by blank lines + '---' between rows so multi-line bodies
-  // are unambiguous. Sender is name-only unless --full (matches triage).
-  const senderOf = (m: MessageSummary) =>
-    full ? m.sender : truncateWidth(senderDisplayName(m.sender), SENDER_WIDTH);
-  const styles = {
-    id: yellow,
-    sender: cyan,
-    subject: (s: string) => bold(linkifyGitHub(s)),
-    date: green,
-    snippet: dim,
-  };
-  const fields = msgs.some((m) => m.snippet)
-    ? ['date', 'sender', 'subject', 'id', 'snippet']
-    : ['date', 'sender', 'subject', 'id'];
-  const rowOf = (m: MessageSummary) => ({
-    id: m.id,
-    sender: senderOf(m),
-    subject: m.subject,
-    date: m.dateReceived,
-    snippet: m.snippet,
-  });
-  if (!msgs.some((m) => m.text != null)) {
-    return formatRecords(msgs.map(rowOf), { json: false, fields, align: true, styles });
-  }
+  // Text mode with attached bodies: one aligned row per message, its body on
+  // the following block, '---' between messages so multi-line bodies are
+  // unambiguous.
   const blocks: string[] = [];
-  for (const m of msgs) {
-    const tsvRow = formatRecords([rowOf(m)], {
-      json: false,
-      fields,
-      align: true,
-      styles,
-    }).trimEnd();
-    blocks.push(m.text != null ? `${tsvRow}\n\n${m.text}\n` : `${tsvRow}\n`);
+  for (let i = 0; i < msgs.length; i++) {
+    const tsvRow = formatRecords([plan.rows[i]], fmt).trimEnd();
+    blocks.push(msgs[i].text != null ? `${tsvRow}\n\n${msgs[i].text}\n` : `${tsvRow}\n`);
   }
   return blocks.join('\n---\n\n');
 }
@@ -434,6 +399,7 @@ export function mergeResults(
 export function formatSearchOutput(
   outcome: SearchOutcome,
   opts: { json: boolean; max: number; countOnly?: boolean; full?: boolean },
+  accounts: Account[] = [],
 ): string {
   if (opts.countOnly) {
     if (opts.json) {
@@ -450,7 +416,7 @@ export function formatSearchOutput(
     }
     return lines.join('\n') + '\n';
   }
-  const body = formatRows(outcome.rows, opts.json, opts.full);
+  const body = formatRows(outcome.rows, opts, accounts);
   if (opts.json) {
     if (outcome.rows.length === 0 && outcome.total === 0) return '';
     const summary: Record<string, number> = {
@@ -512,6 +478,8 @@ export async function runSearchWithDefaultIndex(
     if (opts.body != null && rows.length > 0) {
       rows = await hydrateBodies(env, rows, findMailVersionDir(), opts.body);
     }
+    // Gmail-style user labels for the mailbox column (same as triage).
+    env.attachUserLabels(rows);
 
     return {
       rows,
