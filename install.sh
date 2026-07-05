@@ -45,11 +45,21 @@ cp "${SCRIPT_DIR}/Info.plist" "${APP_DIR}/Contents/Info.plist"
 cp "${SCRIPT_DIR}/assets/macmail.icns" "${RES_DIR}/macmail.icns"
 
 # === Codesign the bundle ===
-# Stable identifier → the FDA grant is keyed on macmail. No --options runtime:
-# hardened runtime SIGTRAPs bun:ffi's call trampolines, and an ad-hoc local
-# binary isn't notarized, so it buys nothing.
-echo "macmail: codesigning macmail.app (kr.ikhoon.macmail)..."
-codesign --sign - --identifier kr.ikhoon.macmail --force "$APP_DIR"
+# Prefer a stable self-signed identity (MacmailSign) so the Full Disk Access
+# grant survives rebuilds — the signature's Designated Requirement becomes
+# identifier+certificate based instead of the per-build cdhash. make-signing-cert.sh
+# creates it once (idempotent); if it can't (e.g. no keychain), fall back to
+# ad-hoc so install still works. No --options runtime: hardened runtime SIGTRAPs
+# bun:ffi's call trampolines, and a local self-signed build isn't notarized.
+SIGN_ID="-" # ad-hoc fallback
+if bash "${SCRIPT_DIR}/scripts/make-signing-cert.sh" \
+  && security find-identity -p codesigning 2>/dev/null | grep -q MacmailSign; then
+  SIGN_ID="MacmailSign"
+  echo "macmail: codesigning macmail.app with the stable '$SIGN_ID' identity..."
+else
+  echo "macmail: codesigning macmail.app ad-hoc (no stable identity — grant won't persist across rebuilds)..."
+fi
+codesign --sign "$SIGN_ID" --identifier kr.ikhoon.macmail --force "$APP_DIR"
 
 # === Symlink the bundle's executable onto PATH ===
 BIN_DIR="${HOME}/.local/bin"

@@ -593,8 +593,16 @@ macmail re-execs itself as its own TCC *responsible process* (codesign identity
 `kr.ikhoon.macmail`), so the grant is keyed to **macmail**, not the launching
 terminal — it works from any terminal afterward (Terminal, iTerm, VS Code, …),
 and macmail already appears in the list by name and icon (no need to add it with
-**+**). After a rebuild/reinstall you may need to re-enable it. Set
-`MACMAIL_NO_DISCLAIM=1` to opt out of the re-exec and grant the terminal instead.
+**+**). Set `MACMAIL_NO_DISCLAIM=1` to opt out of the re-exec and grant the
+terminal instead.
+
+**The grant survives rebuilds.** `install.sh` signs macmail with a stable
+self-signed certificate (`scripts/make-signing-cert.sh` creates it once, backed
+up to `~/.config/macmail/MacmailSign.p12`), so the signature's Designated
+Requirement is certificate-based, not the per-build cdhash — you grant Full Disk
+Access **once** and it sticks across reinstalls. (Without the cert, install falls
+back to ad-hoc signing and you'd re-grant after each rebuild. Don't delete or
+regenerate the cert — that changes the requirement and you'd re-grant once.)
 
 ---
 
