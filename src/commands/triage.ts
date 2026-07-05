@@ -9,7 +9,7 @@ import {
   type Account,
 } from '../lib/mail-data.ts';
 import { formatRecords, senderDisplayName, truncateWidth } from '../lib/output.ts';
-import { bold, cyan, green, magenta, yellow } from '../lib/color.ts';
+import { blue, bold, cyan, green, magenta, yellow } from '../lib/color.ts';
 import { linkifyGitHub } from '../lib/links.ts';
 
 /** Max display width for the (name-only) sender column in text mode. */
@@ -61,9 +61,17 @@ export function formatTriage(
   const idOf = (m: MessageSummary) =>
     accountIdFromMailboxUrl(m.mailboxUrl)?.toUpperCase() ?? '';
   const multiAccount = new Set(msgs.map(idOf)).size > 1;
-  const fields = multiAccount
-    ? ['date', 'account', 'sender', 'subject', 'id']
-    : ['date', 'sender', 'subject', 'id'];
+  // Show the mailbox (Gmail label) column when any message carries a user
+  // label — lets you categorize at a glance (e.g. IMON/mdc-dev).
+  const anyLabels = msgs.some((m) => (m.labels?.length ?? 0) > 0);
+  const fields = [
+    'date',
+    ...(multiAccount ? ['account'] : []),
+    ...(anyLabels ? ['mailbox'] : []),
+    'sender',
+    'subject',
+    'id',
+  ];
   return formatRecords(
     msgs.map((m) => {
       const row: Record<string, unknown> = { id: m.id };
@@ -71,6 +79,13 @@ export function formatTriage(
       // long); --full shows the account email instead. JSON keeps the name (a
       // stable selector scripts pass to --account).
       if (multiAccount) row.account = !opts.json && opts.full ? emailOf(m) : nameOf(m);
+      // JSON carries the labels array (for scripts); text joins them into the
+      // mailbox column.
+      if (opts.json) {
+        if (m.labels?.length) row.labels = m.labels;
+      } else if (anyLabels) {
+        row.mailbox = (m.labels ?? []).join(', ');
+      }
       // JSON keeps the full sender (scripts need it); text shows a compact
       // name-only form unless --full is passed.
       row.sender =
@@ -88,6 +103,7 @@ export function formatTriage(
       styles: {
         id: yellow,
         account: magenta,
+        mailbox: blue,
         sender: cyan,
         subject: (s) => bold(linkifyGitHub(s)),
         date: green,
@@ -105,6 +121,7 @@ export function runTriage(
     mailboxUrlLike: buildMailboxUrlPattern(opts.account, opts.mailbox),
     max: opts.max,
   });
+  env.attachUserLabels(msgs);
   return formatTriage(msgs, opts, accounts);
 }
 

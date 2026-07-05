@@ -198,3 +198,42 @@ describe('formatTriage account column', () => {
     expect(JSON.parse(single.trim()).account).toBeUndefined();
   });
 });
+
+describe('formatTriage mailbox (labels) column', () => {
+  const single = 'imap://AAAAAAAA-0000-0000-0000-000000000001/INBOX';
+  const withLabels = (id: number, labels?: string[]): MessageSummary => ({
+    id,
+    sender: 'Alice <a@x.com>',
+    subject: `subject ${id}`,
+    dateReceived: new Date(id * 1000),
+    read: false,
+    flags: 0,
+    mailboxId: 1,
+    mailboxUrl: single,
+    labels,
+  });
+  const opts = { json: false, account: '', mailbox: 'INBOX', max: 10 };
+
+  test('adds a mailbox column when any message has user labels', () => {
+    const out = formatTriage([withLabels(2, ['G/github']), withLabels(1)], opts);
+    // date · mailbox · sender · subject · id — the labeled row shows its label
+    // in the mailbox column (index 1). (A label-less row's empty cell collapses
+    // when split on runs of spaces, so we only assert the labeled row.)
+    const first = out.trim().split('\n')[0].split(/ {2,}/);
+    expect(first[1]).toBe('G/github');
+    expect(first).toHaveLength(5);
+  });
+
+  test('omits the mailbox column when no message has labels', () => {
+    const out = formatTriage([withLabels(2), withLabels(1)], opts);
+    const rows = out.trim().split('\n').map((l) => l.split(/ {2,}/));
+    expect(rows.every((r) => r.length === 4)).toBe(true); // date · sender · subject · id
+  });
+
+  test('JSON carries a labels array, not a mailbox string', () => {
+    const out = formatTriage([withLabels(2, ['G/github', 'MIRROR'])], { ...opts, json: true });
+    const obj = JSON.parse(out.trim());
+    expect(obj.labels).toEqual(['G/github', 'MIRROR']);
+    expect(obj.mailbox).toBeUndefined();
+  });
+});

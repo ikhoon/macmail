@@ -201,6 +201,11 @@ column is inserted after `date` — the short **account name** (as in `macmail
 accounts`) so you can tell your inboxes apart; `--full` shows the account email
 instead. (`--json` keeps `account` as the account name.)
 
+When messages carry **Gmail-style labels** (e.g. `IMON/mdc-dev`, `G/github`), a
+`mailbox` column appears after `account` showing them — so you can categorize at
+a glance. System mailboxes (`INBOX`, `[Gmail]/*`) are filtered out. `--json` adds
+a `labels` array per message.
+
 ```bash
 macmail triage                          # unread INBOX across all accounts (or your default)
 macmail triage --max 5                  # 5 newest
