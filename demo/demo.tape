@@ -6,7 +6,7 @@ Output "assets/demo-cli.gif"
 
 Set Shell "bash"
 Set FontSize 16
-Set Width 1200
+Set Width 1280
 Set Height 640
 Set Padding 24
 Set Theme "Dracula"
@@ -19,7 +19,7 @@ Sleep 300ms
 Show
 
 Sleep 600ms
-Type "macmail triage --max 3"
+Type "macmail triage --max 4"
 Enter
 Sleep 1.8s
 
@@ -27,10 +27,10 @@ Type "macmail search '초대장'"
 Enter
 Sleep 1.8s
 
-Type "macmail read 2201402 --headers"
+Type "macmail read 2231310 --headers"
 Enter
 Sleep 2.2s
 
-Type "macmail mark 2201455 read --dry-run"
+Type "macmail mark 2232339 read --dry-run"
 Enter
 Sleep 2s
