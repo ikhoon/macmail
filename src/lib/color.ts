@@ -42,6 +42,9 @@ export function colorIsEnabled(): boolean {
 }
 
 export const bold = wrap('\x1b[1m');
+// Underline via on/off codes (SGR 4 / 24) rather than a full reset, so it nests
+// inside bold/color without terminating them — used to mark clickable links.
+export const underline = (s: string): string => (enabled && s ? `\x1b[4m${s}\x1b[24m` : s);
 // Secondary text: bright-black (a readable gray) rather than SGR 2 "faint",
 // which many terminals render as washed-out/low-contrast.
 export const dim = wrap('\x1b[90m');

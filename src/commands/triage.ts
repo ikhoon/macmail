@@ -6,6 +6,7 @@ import {
   defaultEnvelopeIndexPath,
   listAccounts,
   accountIdFromMailboxUrl,
+  shortMailboxName,
   type Account,
 } from '../lib/mail-data.ts';
 import { formatRecords, senderDisplayName, truncateWidth } from '../lib/output.ts';
@@ -84,7 +85,11 @@ export function formatTriage(
       if (opts.json) {
         if (m.labels?.length) row.labels = m.labels;
       } else if (anyLabels) {
-        row.mailbox = (m.labels ?? []).join(', ');
+        // Labelled → the label(s); otherwise the base mailbox (e.g. INBOX) so
+        // the cell isn't blank for uncategorized mail.
+        row.mailbox = m.labels?.length
+          ? m.labels.join(', ')
+          : shortMailboxName(m.mailboxUrl);
       }
       // JSON keeps the full sender (scripts need it); text shows a compact
       // name-only form unless --full is passed.
