@@ -30,7 +30,10 @@ const POSIX_SPAWN_SETEXEC = 0x0040;
 // (completions / help / version) need nothing, so we disclaim only where it
 // helps: no disturbing the automation path, no extra exec on shell-startup
 // `source <(macmail completions …)`.
-const FDA_COMMANDS = new Set(['accounts', 'mailboxes', 'triage', 'search', 'read']);
+// `fda` is included so its access check runs as macmail's own responsible
+// process (the same identity the read commands disclaim into) — otherwise it
+// would check the terminal's inherited grant and misreport "already granted".
+const FDA_COMMANDS = new Set(['accounts', 'mailboxes', 'triage', 'search', 'read', 'fda']);
 
 function debug(msg: string): void {
   if (process.env.MACMAIL_DEBUG_DISCLAIM === '1') {
