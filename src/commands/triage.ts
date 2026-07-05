@@ -34,13 +34,13 @@ export function buildMailboxUrlPattern(account: string, mailbox: string): string
   return `%${account}%/${mailbox}`;
 }
 
-/** A mailbox URL → human account label: the account description from
- *  Accounts4 when the URL's UUID is known, else the raw authority (already
- *  readable for email-style fixtures / unenriched accounts). */
-function accountLabel(url: string, nameById: Map<string, string>): string {
+/** A mailbox URL → a per-account label from a UUID→label map, falling back to
+ *  the raw authority (already readable for email-style fixtures / unenriched
+ *  accounts). Used for the account name (JSON) and the account email (text). */
+function accountLabel(url: string, labelById: Map<string, string>): string {
   const id = accountIdFromMailboxUrl(url);
   if (!id) return '';
-  return nameById.get(id.toUpperCase()) ?? id;
+  return labelById.get(id.toUpperCase()) || id;
 }
 
 export function formatTriage(
@@ -49,17 +49,27 @@ export function formatTriage(
   accounts: Account[] = [],
 ): string {
   const nameById = new Map(accounts.map((a) => [a.uuid.toUpperCase(), a.name]));
-  const labelOf = (m: MessageSummary) => accountLabel(m.mailboxUrl, nameById);
+  // Email per account for the text view ("which address did this arrive at");
+  // falls back to the name when Accounts4 has no login email (local accounts).
+  const emailById = new Map(
+    accounts.map((a) => [a.uuid.toUpperCase(), a.email ?? a.name]),
+  );
+  const nameOf = (m: MessageSummary) => accountLabel(m.mailboxUrl, nameById);
+  const emailOf = (m: MessageSummary) => accountLabel(m.mailboxUrl, emailById);
   // Only surface the account column when the result actually spans more than
-  // one account — keeps the common single-account view uncluttered.
-  const multiAccount = new Set(msgs.map(labelOf)).size > 1;
+  // one account — keyed on the account UUID so it's independent of the label.
+  const idOf = (m: MessageSummary) =>
+    accountIdFromMailboxUrl(m.mailboxUrl)?.toUpperCase() ?? '';
+  const multiAccount = new Set(msgs.map(idOf)).size > 1;
   const fields = multiAccount
     ? ['id', 'account', 'sender', 'subject', 'date']
     : ['id', 'sender', 'subject', 'date'];
   return formatRecords(
     msgs.map((m) => {
       const row: Record<string, unknown> = { id: m.id };
-      if (multiAccount) row.account = labelOf(m);
+      // Text shows the account email; JSON keeps the account name (a stable
+      // selector scripts pass to --account).
+      if (multiAccount) row.account = opts.json ? nameOf(m) : emailOf(m);
       // JSON keeps the full sender (scripts need it); text shows a compact
       // name-only form unless --full is passed.
       row.sender =
