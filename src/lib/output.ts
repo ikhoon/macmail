@@ -35,15 +35,16 @@ export function toLocalISO(d: Date): string {
 //   friendly → Mon Jul 6 09:30            (weekday + month name)
 //   compact  → Jul 6 09:30                (month name + day; year added when not this year)
 export type DateStyle = 'iso' | 'readable' | 'friendly' | 'compact';
-const DATE_STYLES: readonly DateStyle[] = ['iso', 'readable', 'friendly', 'compact'];
 
-let dateStyle: DateStyle = 'readable';
+// The active text date spec: a named style, or a custom moment/dayjs pattern
+// (any other non-empty string, e.g. "YYYY-MM-DD HH:mm" or "MMM D, HH:mm").
+let dateSpec = 'readable';
 
-/** Set the module-wide text date style (from config / --iso), once per command.
- *  An unknown value falls back to the default (readable). */
+/** Set the module-wide text date spec (from config / --iso), once per command.
+ *  A named style uses that; any other non-empty string is a custom pattern;
+ *  empty/undefined falls back to the default (readable). */
 export function configureDateStyle(s: string | undefined): void {
-  const v = (s ?? 'readable').toLowerCase();
-  dateStyle = DATE_STYLES.includes(v as DateStyle) ? (v as DateStyle) : 'readable';
+  dateSpec = s && s.length > 0 ? s : 'readable';
 }
 
 const MONTHS = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -56,19 +57,62 @@ function monthDay(d: Date, now: Date): string {
   return d.getFullYear() === now.getFullYear() ? base : `${base} ${d.getFullYear()}`;
 }
 
-/** Render a Date in the given (or module-wide) text style. */
-export function formatDate(d: Date, style: DateStyle = dateStyle, now: Date = new Date()): string {
-  const ymd = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+// moment/dayjs-style tokens, longest-first so the regex prefers YYYY over YY,
+// MMM over MM over M, etc. `[literal]` passes its contents through verbatim.
+const CUSTOM_RE = /\[([^\]]*)\]|YYYY|YY|MMM|MM|M|DD|D|ddd|HH|H|hh|h|mm|m|ss|s|A|a|ZZ|Z/g;
+
+/** Render a Date with a custom moment/dayjs pattern (local time). Supported:
+ *  YYYY YY · MMM MM M · DD D · ddd · HH H · hh h · mm m · ss s · A a · ZZ Z,
+ *  and `[literal text]`. Unknown characters pass through unchanged. */
+export function formatCustom(d: Date, pattern: string, now: Date = new Date()): string {
+  void now;
+  const H = d.getHours();
+  const h12 = ((H + 11) % 12) + 1;
+  const offMin = -d.getTimezoneOffset();
+  const os = offMin >= 0 ? '+' : '-';
+  const ao = Math.abs(offMin);
+  const oh = p2(Math.floor(ao / 60));
+  const om = p2(ao % 60);
+  const map: Record<string, string> = {
+    YYYY: String(d.getFullYear()),
+    YY: p2(d.getFullYear() % 100),
+    MMM: MONTHS[d.getMonth() + 1],
+    MM: p2(d.getMonth() + 1),
+    M: String(d.getMonth() + 1),
+    DD: p2(d.getDate()),
+    D: String(d.getDate()),
+    ddd: WEEKDAYS[d.getDay()],
+    HH: p2(H),
+    H: String(H),
+    hh: p2(h12),
+    h: String(h12),
+    mm: p2(d.getMinutes()),
+    m: String(d.getMinutes()),
+    ss: p2(d.getSeconds()),
+    s: String(d.getSeconds()),
+    A: H < 12 ? 'AM' : 'PM',
+    a: H < 12 ? 'am' : 'pm',
+    ZZ: `${os}${oh}${om}`,
+    Z: `${os}${oh}:${om}`,
+  };
+  return pattern.replace(CUSTOM_RE, (tok, literal) => (literal !== undefined ? literal : map[tok]));
+}
+
+/** Render a Date in the given (or module-wide) spec: a named style or a custom
+ *  moment/dayjs pattern. */
+export function formatDate(d: Date, spec: string = dateSpec, now: Date = new Date()): string {
   const hhmm = `${p2(d.getHours())}:${p2(d.getMinutes())}`;
-  switch (style) {
+  switch (spec.toLowerCase()) {
     case 'iso':
       return toLocalISO(d);
     case 'friendly':
       return `${WEEKDAYS[d.getDay()]} ${monthDay(d, now)} ${hhmm}`;
     case 'compact':
       return `${monthDay(d, now)} ${hhmm}`;
+    case 'readable':
+      return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${hhmm}`;
     default:
-      return `${ymd} ${hhmm}`; // readable
+      return formatCustom(d, spec, now); // custom pattern
   }
 }
 

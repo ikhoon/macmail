@@ -501,6 +501,11 @@ stays UTC ISO for scripts). `--iso` forces the machine form for one run.
 | `"friendly"` | `Mon Jul 6 09:30` |
 | `"compact"` | `Jul 6 09:30` (adds the year when it isn't the current one) |
 
+Any other value is a **custom moment/dayjs pattern**, e.g. `"MM/DD HH:mm"` →
+`07/06 09:30`. Tokens: `YYYY YY` · `MMM MM M` · `DD D` · `ddd` · `HH H` ·
+`hh h` · `mm m` · `ss s` · `A a` · `ZZ Z` (offset); wrap literal text in
+`[brackets]` (`"[at] HH:mm"` → `at 09:30`).
+
 ---
 
 ## Scripting with JSON

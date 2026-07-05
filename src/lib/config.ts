@@ -60,12 +60,8 @@ export function parseConfig(text: string): MacmailConfig {
   if (cfg.color !== undefined && !['auto', 'always', 'never'].includes(cfg.color.toLowerCase())) {
     throw new Error('config: "color" must be "auto", "always", or "never"');
   }
-  if (
-    cfg.dateFormat !== undefined &&
-    !['readable', 'iso', 'friendly', 'compact'].includes(cfg.dateFormat.toLowerCase())
-  ) {
-    throw new Error('config: "dateFormat" must be "readable", "iso", "friendly", or "compact"');
-  }
+  // dateFormat is any string: a named style (readable/iso/friendly/compact) or a
+  // custom moment/dayjs pattern (e.g. "YYYY-MM-DD HH:mm"). No enum check.
   return cfg;
 }
 
