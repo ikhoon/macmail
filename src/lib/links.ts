@@ -9,7 +9,7 @@
 // Gated on colorIsEnabled() — so piped / redirected / --json / --no-color output
 // stays plain (no escape codes leak into scripts).
 
-import { colorIsEnabled, underline } from './color.ts';
+import { colorIsEnabled, linkText } from './color.ts';
 
 const OSC = '\x1b]8;;';
 // BEL terminates the OSC sequence. It's more widely recognized than the ST
@@ -36,8 +36,8 @@ export function linkifyGitHub(subject: string): string {
   if (!repo) return subject;
   return subject.replace(/(?:\b(PR|Issue) )?#(\d+)\b/g, (whole, kind: string | undefined, n: string) => {
     const path = kind === 'PR' ? 'pull' : 'issues';
-    // Underline the visible text so it reads as a clickable link even in
-    // terminals that don't style OSC 8 hyperlinks themselves.
-    return osc8(`https://github.com/${repo}/${path}/${n}`, underline(whole));
+    // Style the visible text (dotted underline, soft blue) so it reads as a
+    // clickable link even in terminals that don't style OSC 8 hyperlinks.
+    return osc8(`https://github.com/${repo}/${path}/${n}`, linkText(whole));
   });
 }
