@@ -130,11 +130,20 @@ describe('formatDate styles', () => {
     expect(formatDate(d, 'compact', now)).toBe('Jul 6 09:30');
     expect(formatDate(new Date(2027, 0, 2, 8, 5, 0), 'compact', now)).toBe('Jan 2 2027 08:05');
   });
-  it('configureDateStyle sets the module default; unknown falls back to readable', () => {
+  it('configureDateStyle sets the module default; empty falls back to readable', () => {
     configureDateStyle('friendly');
     expect(formatDate(d, undefined, now)).toBe('Mon Jul 6 09:30');
-    configureDateStyle('nonsense');
-    expect(formatDate(d, undefined, now)).toBe('2026-07-06 09:30');
     configureDateStyle(undefined); // reset to readable
+    expect(formatDate(d, undefined, now)).toBe('2026-07-06 09:30');
+  });
+
+  it('custom moment/dayjs pattern: any non-preset string is a pattern', () => {
+    expect(formatDate(d, 'YYYY-MM-DD HH:mm', now)).toBe('2026-07-06 09:30');
+    expect(formatDate(d, 'MM/DD HH:mm', now)).toBe('07/06 09:30');
+    expect(formatDate(d, 'MMM D, YYYY', now)).toBe('Jul 6, 2026');
+    expect(formatDate(d, 'ddd hh:mm a', now)).toBe('Mon 09:30 am');
+    expect(formatDate(d, 'H:mm', now)).toBe('9:30');
+    // [literal] passes through; unknown chars stay as-is.
+    expect(formatDate(d, '[on] YYYY年M月D日', now)).toBe('on 2026年7月6日');
   });
 });
