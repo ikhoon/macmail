@@ -3,9 +3,9 @@ import { formatAccounts } from '../../src/commands/accounts.ts';
 import type { Account } from '../../src/lib/mail-data.ts';
 
 const SAMPLE: Account[] = [
-  { uuid: 'A4E92B36-90A1-4BA5-AD06-2A5E6179D603', name: 'Personal',  email: 'personal@example.com',     type: 'Gmail' },
-  { uuid: 'DC1EB047-9021-45D6-A252-50FF783B0335', name: 'Work',      email: 'user@example.com',     type: 'Gmail' },
-  { uuid: '7DDA5222-2321-466C-897F-E7B80F097675', name: 'On My Mac', email: null,                   type: 'On My Device' },
+  { uuid: 'AAAAAAAA-1111-2222-3333-444444444444', name: 'Personal',  email: 'personal@example.com',     type: 'Gmail' },
+  { uuid: 'BBBBBBBB-1111-2222-3333-444444444444', name: 'Work',      email: 'user@example.com',     type: 'Gmail' },
+  { uuid: 'DDDDDDDD-1111-2222-3333-444444444444', name: 'On My Mac', email: null,                   type: 'On My Device' },
 ];
 
 describe('accounts command', () => {
@@ -29,7 +29,7 @@ describe('accounts command', () => {
       account: 'Personal',
       email: 'personal@example.com',
       type: 'Gmail',
-      uuid: 'A4E92B36-90A1-4BA5-AD06-2A5E6179D603',
+      uuid: 'AAAAAAAA-1111-2222-3333-444444444444',
     });
     expect(lines[2].email).toBe('');
   });

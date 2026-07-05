@@ -60,7 +60,7 @@ describe('runSubjectSearch (SQL via Envelope Index)', () => {
       max: 5,
     });
     expect(hits).toHaveLength(1);
-    expect(hits[0].subject).toBe('초대장: xDS server design');
+    expect(hits[0].subject).toBe('초대장: 봄맞이 다과회');
   });
 
   test('returns empty list when no match', () => {
@@ -546,24 +546,24 @@ describe('formatSearchOutput account + mailbox columns (shared with triage)', ()
 
   test('user labels render in a mailbox column with an INBOX fallback', () => {
     const out = formatSearchOutput(
-      { rows: [row(1, A, ['G/github']), row(2, A)], total: 2 },
+      { rows: [row(1, A, ['dev/bomnun']), row(2, A)], total: 2 },
       { json: false, max: 10 },
       accounts,
     );
     const first = out.trim().split('\n')[0].split(/ {2,}/);
-    expect(first[1]).toBe('G/github');
+    expect(first[1]).toBe('dev/bomnun');
     expect(out.trim().split('\n')[1]).toContain('INBOX');
   });
 
   test('JSON rows carry account name + labels array', () => {
     const out = formatSearchOutput(
-      { rows: [row(1, A, ['G/github']), row(2, B)], total: 2 },
+      { rows: [row(1, A, ['dev/bomnun']), row(2, B)], total: 2 },
       { json: true, max: 10 },
       accounts,
     );
     const first = JSON.parse(out.trim().split('\n')[0]);
     expect(first.account).toBe('Work');
-    expect(first.labels).toEqual(['G/github']);
+    expect(first.labels).toEqual(['dev/bomnun']);
   });
 });
 

@@ -65,7 +65,7 @@ function buildFixtureDb(): Database {
     INSERT INTO subjects (ROWID, subject) VALUES
       (1, 'Welcome'),
       (2, 'Meeting at noon'),
-      (3, '초대장: xDS server design'),
+      (3, '초대장: 봄맞이 다과회'),
       (4, '[Jira] FOO-123 updated'),
       (5, 'Gmail labelled note'),
       (6, 'Deleted draft');
@@ -134,7 +134,7 @@ describe('EnvelopeIndex', () => {
     const t = env.triage({ mailboxUrlLike: '%user@gmail.com/INBOX', max: 10 });
     expect(t.map((m) => m.id)).toEqual([102, 101]);
     expect(t[0].read).toBe(false);
-    expect(t[0].subject).toBe('초대장: xDS server design');
+    expect(t[0].subject).toBe('초대장: 봄맞이 다과회');
   });
 
   test('triage formats sender as "Name <address>" when both present', () => {
@@ -160,7 +160,7 @@ describe('EnvelopeIndex', () => {
       max: 5,
     });
     expect(r).toHaveLength(1);
-    expect(r[0].subject).toBe('초대장: xDS server design');
+    expect(r[0].subject).toBe('초대장: 봄맞이 다과회');
   });
 
   test('searchSubject finds english substring', () => {
@@ -201,7 +201,7 @@ describe('EnvelopeIndex', () => {
   test('findMessage returns hit by ROWID', () => {
     const m = env.findMessage(102);
     expect(m).not.toBeNull();
-    expect(m!.subject).toBe('초대장: xDS server design');
+    expect(m!.subject).toBe('초대장: 봄맞이 다과회');
     expect(m!.mailboxUrl).toBe('imap://user@gmail.com/INBOX');
   });
 

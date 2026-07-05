@@ -13,9 +13,9 @@ import {
   type Account,
 } from '../src/lib/mail-data.ts';
 
-const UUID_GMAIL = 'A4E92B36-90A1-4BA5-AD06-2A5E6179D603';
-const UUID_WORK  = 'DC1EB047-9021-45D6-A252-50FF783B0335';
-const UUID_LOCAL = '7DDA5222-2321-466C-897F-E7B80F097675';
+const UUID_GMAIL = 'AAAAAAAA-1111-2222-3333-444444444444';
+const UUID_WORK  = 'BBBBBBBB-1111-2222-3333-444444444444';
+const UUID_LOCAL = 'DDDDDDDD-1111-2222-3333-444444444444';
 
 /** Build an Accounts4-compatible SQLite file at `path`, populated with the
  * child→parent rows that match the UUIDs above. */
@@ -195,7 +195,7 @@ describe('resolveAccountUuid', () => {
 
 describe('mailboxUrlToFsPath', () => {
   const ROOT = '/tmp/mail/V10';
-  const UUID = 'DC1EB047-9021-45D6-A252-50FF783B0335';
+  const UUID = 'BBBBBBBB-1111-2222-3333-444444444444';
 
   test('simple top-level mailbox', () => {
     expect(mailboxUrlToFsPath(`imap://${UUID}/INBOX`, ROOT)).toBe(

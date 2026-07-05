@@ -300,7 +300,7 @@ export class EnvelopeIndex {
    * Attach each message's user labels (Gmail-style categories) in place, via
    * the `labels` table joined to `mailboxes`. System mailboxes (INBOX,
    * [Gmail]/*) are excluded, so what's left is the categorization the user
-   * cares about (e.g. "IMON/mdc-dev"). No-op for an empty list. Cheap: one
+   * cares about (e.g. "dev/bomnun"). No-op for an empty list. Cheap: one
    * `WHERE message_id IN (…)` query.
    */
   attachUserLabels(msgs: MessageSummary[]): void {
