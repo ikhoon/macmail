@@ -4,7 +4,7 @@ import { readdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
 import { parseEmlx, type ParsedEmlx } from '../lib/emlx.ts';
-import { toLocalDisplay } from '../lib/output.ts';
+import { formatDate } from '../lib/output.ts';
 import { bold, cyan, dim, green } from '../lib/color.ts';
 import { linkifyGitHub } from '../lib/links.ts';
 
@@ -41,7 +41,7 @@ export function formatHeaders(parsed: ParsedEmlx): string {
   return [
     `${dim('From:')} ${cyan(parsed.from)}`,
     `${dim('To:')} ${parsed.to.join(', ')}`,
-    `${dim('Date:')} ${green(parsed.date ? toLocalDisplay(parsed.date) : '')}`,
+    `${dim('Date:')} ${green(parsed.date ? formatDate(parsed.date) : '')}`,
     `${dim('Subject:')} ${bold(linkifyGitHub(parsed.subject))}`,
     `${dim('Message-ID:')} ${dim(parsed.messageId)}`,
     '',

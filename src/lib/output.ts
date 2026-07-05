@@ -28,14 +28,48 @@ export function toLocalISO(d: Date): string {
   );
 }
 
-/** Local-time ISO for humans: drops the trailing offset when it matches the
- *  reader's current offset (redundant), keeping it only when it differs — e.g.
- *  a message from the other side of a daylight-saving change. */
-export function toLocalDisplay(d: Date): string {
-  const iso = toLocalISO(d);
-  return d.getTimezoneOffset() === new Date().getTimezoneOffset()
-    ? iso.replace(/[+-]\d{2}:\d{2}$/, '')
-    : iso;
+// Human date styles for TEXT output (mirrors maccal). Pipes and --json always
+// stay UTC ISO (machine contract); only text output uses a readable style.
+//   iso      → 2026-07-06T09:30:00+09:00  (local, with offset — the machine form)
+//   readable → 2026-07-06 09:30           (default: date + HH:MM, no seconds/offset)
+//   friendly → Mon Jul 6 09:30            (weekday + month name)
+//   compact  → Jul 6 09:30                (month name + day; year added when not this year)
+export type DateStyle = 'iso' | 'readable' | 'friendly' | 'compact';
+const DATE_STYLES: readonly DateStyle[] = ['iso', 'readable', 'friendly', 'compact'];
+
+let dateStyle: DateStyle = 'readable';
+
+/** Set the module-wide text date style (from config / --iso), once per command.
+ *  An unknown value falls back to the default (readable). */
+export function configureDateStyle(s: string | undefined): void {
+  const v = (s ?? 'readable').toLowerCase();
+  dateStyle = DATE_STYLES.includes(v as DateStyle) ? (v as DateStyle) : 'readable';
+}
+
+const MONTHS = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const p2 = (n: number) => String(n).padStart(2, '0');
+
+/** `Jul 6`, plus ` 2027` when the date's year differs from now's. */
+function monthDay(d: Date, now: Date): string {
+  const base = `${MONTHS[d.getMonth() + 1]} ${d.getDate()}`;
+  return d.getFullYear() === now.getFullYear() ? base : `${base} ${d.getFullYear()}`;
+}
+
+/** Render a Date in the given (or module-wide) text style. */
+export function formatDate(d: Date, style: DateStyle = dateStyle, now: Date = new Date()): string {
+  const ymd = `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+  const hhmm = `${p2(d.getHours())}:${p2(d.getMinutes())}`;
+  switch (style) {
+    case 'iso':
+      return toLocalISO(d);
+    case 'friendly':
+      return `${WEEKDAYS[d.getDay()]} ${monthDay(d, now)} ${hhmm}`;
+    case 'compact':
+      return `${monthDay(d, now)} ${hhmm}`;
+    default:
+      return `${ymd} ${hhmm}`; // readable
+  }
 }
 
 /** Compact sender label from an RFC5322 `Name <addr>`: the display name
@@ -85,7 +119,7 @@ export function truncateWidth(s: string, max: number): string {
 
 function stringifyCell(v: unknown): string {
   if (v == null) return '';
-  if (v instanceof Date) return toLocalDisplay(v);
+  if (v instanceof Date) return formatDate(v);
   return String(v);
 }
 
