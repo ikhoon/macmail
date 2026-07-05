@@ -23,14 +23,14 @@ Type "macmail triage --max 4"
 Enter
 Sleep 1.8s
 
-Type "macmail search '초대장'"
+Type "macmail search '고래'"
 Enter
 Sleep 1.8s
 
-Type "macmail read 1047310 --headers"
+Type "macmail read 402198 --headers"
 Enter
 Sleep 2.2s
 
-Type "macmail mark 1048214 read --dry-run"
+Type "macmail mark 402198 read --dry-run"
 Enter
 Sleep 2s
