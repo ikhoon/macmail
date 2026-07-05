@@ -70,6 +70,9 @@ export interface BodySearchResult {
 
 export interface SearchOutcome {
   rows: MessageSummary[];
+  /** Total matches. Exact for the subject side (ID-only query, no cap); the
+   *  body side is bounded by the candidate over-fetch cap, since an exact
+   *  body total would mean grepping every cached .emlx. */
   total: number;
   /** How many `.emlx` were read on the body path. Absent for subject-only. */
   examined?: number;
@@ -439,53 +442,92 @@ function overFetchLimit(max: number): number {
   return Math.min(Math.max(max * 10, 200), 1000);
 }
 
-export async function runSearchWithDefaultIndex(
+export async function runSearch(
+  env: EnvelopeIndex,
   opts: SearchOptions,
+  deps?: RunBodySearchDeps,
 ): Promise<SearchOutcome> {
-  const env = new EI(defaultEnvelopeIndexPath());
-  try {
-    const fetchCap = overFetchLimit(opts.max);
-    const subjectMatches =
-      opts.scope === 'body'
-        ? []
-        : runSubjectSearch(env, { ...opts, max: fetchCap });
+  const fetchCap = overFetchLimit(opts.max);
+  const subjectMatches =
+    opts.scope === 'body' ? [] : runSubjectSearch(env, { ...opts, max: fetchCap });
 
-    let bodyResult: BodySearchResult | null = null;
-    if (opts.scope !== 'subject') {
-      bodyResult = await runBodySearch(env, {
+  let bodyResult: BodySearchResult | null = null;
+  if (opts.scope !== 'subject') {
+    bodyResult = await runBodySearch(
+      env,
+      {
         account: opts.account,
         mailbox: opts.mailbox,
         query: opts.query ?? '',
         max: fetchCap,
         filters: opts.filters,
         snippet: opts.snippet,
-      });
-    }
+      },
+      deps,
+    );
+  }
 
-    const bodyMatches = bodyResult?.rows ?? [];
-    let unioned: MessageSummary[];
-    if (opts.scope === 'both') {
-      unioned = mergeResults(subjectMatches, bodyMatches, fetchCap);
-    } else if (opts.scope === 'subject') {
-      unioned = subjectMatches;
-    } else {
-      unioned = bodyMatches;
-    }
+  const bodyMatches = bodyResult?.rows ?? [];
+  let unioned: MessageSummary[];
+  if (opts.scope === 'both') {
+    unioned = mergeResults(subjectMatches, bodyMatches, fetchCap);
+  } else if (opts.scope === 'subject') {
+    unioned = subjectMatches;
+  } else {
+    unioned = bodyMatches;
+  }
 
-    const total = unioned.length;
-    let rows = opts.countOnly ? [] : unioned.slice(0, opts.max);
+  // `total`: the subject side is EXACT (a cheap ID-only query with no LIMIT),
+  // fixing the old undercount where totals were silently capped at the
+  // over-fetch limit (≤1000). The body side stays bounded by the candidate
+  // cap — an exact body total would mean grepping every cached .emlx.
+  let total: number;
+  if (opts.scope === 'subject') {
+    total = env.searchSubjectIds({
+      mailboxUrlLike: buildMailboxUrlPattern(opts.account, opts.mailbox),
+      query: opts.query,
+      filters: opts.filters,
+    }).length;
+  } else if (opts.scope === 'both') {
+    const ids = new Set(
+      env.searchSubjectIds({
+        mailboxUrlLike: buildMailboxUrlPattern(opts.account, opts.mailbox),
+        query: opts.query,
+        filters: opts.filters,
+      }),
+    );
+    for (const m of bodyMatches) ids.add(m.id);
+    total = ids.size;
+  } else {
+    total = bodyResult?.total ?? unioned.length;
+  }
 
-    if (opts.body != null && rows.length > 0) {
-      rows = await hydrateBodies(env, rows, findMailVersionDir(), opts.body);
-    }
-    // Gmail-style user labels for the mailbox column (same as triage).
-    env.attachUserLabels(rows);
+  let rows = opts.countOnly ? [] : unioned.slice(0, opts.max);
 
-    return {
+  if (opts.body != null && rows.length > 0) {
+    rows = await hydrateBodies(
+      env,
       rows,
-      total,
-      examined: bodyResult?.examined,
-    };
+      deps?.mailVersionDir ?? findMailVersionDir(),
+      opts.body,
+    );
+  }
+  // Gmail-style user labels for the mailbox column (same as triage).
+  env.attachUserLabels(rows);
+
+  return {
+    rows,
+    total,
+    examined: bodyResult?.examined,
+  };
+}
+
+export async function runSearchWithDefaultIndex(
+  opts: SearchOptions,
+): Promise<SearchOutcome> {
+  const env = new EI(defaultEnvelopeIndexPath());
+  try {
+    return await runSearch(env, opts);
   } finally {
     env.close();
   }
