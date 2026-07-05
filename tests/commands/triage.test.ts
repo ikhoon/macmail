@@ -35,7 +35,7 @@ describe('triage command', () => {
     });
     const lines = out.trim().split('\n');
     expect(lines).toHaveLength(2);
-    const [first, second] = lines.map((l) => l.split('\t'));
+    const [first, second] = lines.map((l) => l.split(/ {2,}/));
     expect(first[0]).toBe('102'); // newest unread
     expect(first[2]).toBe('초대장: xDS server design');
     expect(second[0]).toBe('101');
@@ -88,7 +88,7 @@ describe('triage command', () => {
     // Empty selector → %%/INBOX matches the INBOX of user@gmail.com (storage),
     // other@icloud.com (storage) and gview@gmail.com (label-mapped view).
     const out = runTriage(env, { json: false, account: '', mailbox: 'INBOX', max: 10 });
-    const rows = out.trim().split('\n').map((l) => l.split('\t'));
+    const rows = out.trim().split('\n').map((l) => l.split(/ {2,}/));
     // 400 (gview), 300 (icloud), 102 + 101 (user@gmail), newest-first.
     expect(rows.map((r) => r[0])).toEqual(['400', '300', '102', '101']);
     // Five columns now: id, account, sender, subject, date.
@@ -106,7 +106,7 @@ describe('triage command', () => {
       mailbox: 'INBOX',
       max: 10,
     });
-    const rows = out.trim().split('\n').map((l) => l.split('\t'));
+    const rows = out.trim().split('\n').map((l) => l.split(/ {2,}/));
     expect(rows.every((r) => r.length === 4)).toBe(true);
   });
 });
@@ -137,7 +137,7 @@ describe('formatTriage account column', () => {
       opts,
       accounts,
     );
-    const rows = out.trim().split('\n').map((l) => l.split('\t'));
+    const rows = out.trim().split('\n').map((l) => l.split(/ {2,}/));
     expect(rows[0][1]).toBe('Work');
     expect(rows[1][1]).toBe('Personal');
   });
@@ -151,7 +151,7 @@ describe('formatTriage account column', () => {
       opts,
       accounts,
     );
-    const rows = out.trim().split('\n').map((l) => l.split('\t'));
+    const rows = out.trim().split('\n').map((l) => l.split(/ {2,}/));
     expect(rows.every((r) => r.length === 4)).toBe(true);
   });
 

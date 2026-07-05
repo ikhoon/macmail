@@ -13,9 +13,12 @@ describe('accounts command', () => {
     const out = formatAccounts(SAMPLE, { json: false });
     const lines = out.trimEnd().split('\n');
     expect(lines).toHaveLength(3);
-    expect(lines[0].split('\t')).toEqual(['Personal', 'personal@example.com', 'Gmail']);
-    expect(lines[1].split('\t')).toEqual(['Work', 'user@example.com', 'Gmail']);
-    expect(lines[2].split('\t')).toEqual(['On My Mac', '', 'On My Device']);
+    expect(lines[0].split(/ {2,}/)).toEqual(['Personal', 'personal@example.com', 'Gmail']);
+    expect(lines[1].split(/ {2,}/)).toEqual(['Work', 'user@example.com', 'Gmail']);
+    // A no-email account: aligned text leaves the email column blank.
+    expect(lines[2].startsWith('On My Mac')).toBe(true);
+    expect(lines[2].trimEnd().endsWith('On My Device')).toBe(true);
+    expect(lines[2]).not.toContain('@');
   });
 
   test('json mode emits NDJSON with account/email/type/uuid', () => {

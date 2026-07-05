@@ -37,10 +37,14 @@ export function colorIsEnabled(): boolean {
   return enabled;
 }
 
-export const dim = wrap('\x1b[2m');
 export const bold = wrap('\x1b[1m');
-export const yellow = wrap('\x1b[33m');
-export const cyan = wrap('\x1b[36m');
-export const green = wrap('\x1b[32m');
-export const magenta = wrap('\x1b[35m');
-export const blue = wrap('\x1b[34m');
+// Secondary text: bright-black (a readable gray) rather than SGR 2 "faint",
+// which many terminals render as washed-out/low-contrast.
+export const dim = wrap('\x1b[90m');
+// Bright (90–97) foregrounds — more legible on dark terminals than the muted
+// 30–37 set.
+export const yellow = wrap('\x1b[93m');
+export const cyan = wrap('\x1b[96m');
+export const green = wrap('\x1b[92m');
+export const magenta = wrap('\x1b[95m');
+export const blue = wrap('\x1b[94m');

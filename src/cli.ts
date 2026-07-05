@@ -273,6 +273,7 @@ YYYY-MM-DD, MM-DD, or a token (today/yesterday/Nd/Nw) at local midnight.`,
     'attach the full decoded text body to each row (truncate to N when given)',
   )
   .option('--max <n>', 'maximum rows when not --count-only', '10')
+  .option('--full', 'show the full "Name <email>" sender (default: name only)')
   .action(async (query: string | undefined, opts) => {
     requireFda();
     const scope = opts.in as SearchScope;
@@ -343,12 +344,14 @@ YYYY-MM-DD, MM-DD, or a token (today/yesterday/Nd/Nw) at local midnight.`,
       countOnly: !!opts.countOnly,
       snippet,
       body,
+      full: !!opts.full,
     });
     process.stdout.write(
       formatSearchOutput(outcome, {
         json: !!opts.json,
         max,
         countOnly: !!opts.countOnly,
+        full: !!opts.full,
       }),
     );
   });
@@ -370,6 +373,7 @@ Examples:
   .option('--account <pattern>', 'account description / email / UUID; omit to span all accounts (default: $MACMAIL_DEFAULT_ACCOUNT)', DEFAULT_ACCOUNT)
   .option('--mailbox <name>', 'trailing mailbox path component (default: $MACMAIL_DEFAULT_MAILBOX or "INBOX")', DEFAULT_MAILBOX)
   .option('--max <n>', 'maximum results', '20')
+  .option('--full', 'show the full "Name <email>" sender (default: name only)')
   .action((opts) => {
     requireFda();
     const max = parseIntStrict(opts.max, '--max');
@@ -386,6 +390,7 @@ Examples:
         account: acct.value,
         mailbox: opts.mailbox,
         max,
+        full: !!opts.full,
       }),
     );
   });

@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { formatRecords } from '../src/lib/output.ts';
+import {
+  formatRecords,
+  displayWidth,
+  truncateWidth,
+  senderDisplayName,
+} from '../src/lib/output.ts';
 
 describe('formatRecords', () => {
   test('text mode joins all fields by tab, one row per line, trailing newline', () => {
@@ -54,11 +59,11 @@ describe('formatRecords', () => {
       '{"when":"2026-05-27T10:00:00.000Z"}\n',
     );
 
-    // Text is for humans: ISO 8601 in the local zone with a ±HH:MM offset,
-    // no trailing Z — but the same absolute instant. Asserted by shape +
-    // round-trip so the test holds in any timezone.
+    // Text is for humans: local-zone ISO 8601. The offset is dropped when it
+    // matches the reader's current one (as here), leaving no trailing Z — but
+    // the same absolute instant. Asserted by shape + round-trip.
     const text = formatRecords([{ when: d }], { json: false }).trimEnd();
-    expect(text).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/);
+    expect(text).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/);
     expect(text.endsWith('Z')).toBe(false);
     expect(new Date(text).getTime()).toBe(d.getTime());
   });
@@ -73,5 +78,36 @@ describe('formatRecords', () => {
   test('custom separator', () => {
     const out = formatRecords([{ a: 'x', b: 'y' }], { json: false, separator: ',' });
     expect(out).toBe('x,y\n');
+  });
+
+  test('align pads columns to a common display width', () => {
+    const out = formatRecords(
+      [
+        { a: 'x', b: 'hi' },
+        { a: 'yy', b: 'z' },
+      ],
+      { json: false, fields: ['a', 'b'], align: true },
+    );
+    // Column a padded to width 2 (+ a 2-space gap); the last column isn't padded.
+    expect(out).toBe('x   hi\nyy  z\n');
+  });
+});
+
+describe('display helpers', () => {
+  test('displayWidth counts CJK as 2, ANSI escapes as 0', () => {
+    expect(displayWidth('ab')).toBe(2);
+    expect(displayWidth('엄')).toBe(2);
+    expect(displayWidth('\x1b[96mx\x1b[0m')).toBe(1);
+  });
+
+  test('truncateWidth cuts by display width with an ellipsis', () => {
+    expect(truncateWidth('hello', 10)).toBe('hello');
+    expect(truncateWidth('hello world', 6)).toBe('hello…');
+  });
+
+  test('senderDisplayName returns the display name, or the address when none', () => {
+    expect(senderDisplayName('Alice <a@x.com>')).toBe('Alice');
+    expect(senderDisplayName('"Bob B" <b@x.com>')).toBe('Bob B');
+    expect(senderDisplayName('c@x.com')).toBe('c@x.com');
   });
 });
