@@ -6,6 +6,7 @@ import { EnvelopeIndex, type MessageSummary } from '../../src/lib/envelope.ts';
 import {
   runSubjectSearch,
   runBodySearch,
+  runSearch,
   mergeResults,
   formatSearchOutput,
   parseSearchDate,
@@ -563,5 +564,74 @@ describe('formatSearchOutput account + mailbox columns (shared with triage)', ()
     const first = JSON.parse(out.trim().split('\n')[0]);
     expect(first.account).toBe('Work');
     expect(first.labels).toEqual(['G/github']);
+  });
+});
+
+describe('runSearch exact totals (over-fetch cap no longer truncates)', () => {
+  /** Fixture + 250 extra unread messages whose subject contains "bulk" — more
+   *  than the over-fetch cap for max=1 (min(max(10, 200), 1000) = 200), so a
+   *  capped total would read 200 while the true count is 250. */
+  function withBulk(): EnvelopeIndex {
+    const db = buildEnvelopeFixture();
+    db.exec(`INSERT INTO subjects (ROWID, subject) VALUES (100, 'bulk notice');`);
+    let values = '';
+    for (let i = 0; i < 250; i++) {
+      values += `${i ? ',' : ''}(${1000 + i}, 1, 100, 1, ${802700000 + i}, 0)`;
+    }
+    db.exec(
+      `INSERT INTO messages (ROWID, sender, subject, mailbox, date_received, flags) VALUES ${values};`,
+    );
+    return new EnvelopeIndex(db);
+  }
+
+  test('subject scope reports the exact total past the fetch cap', async () => {
+    const env = withBulk();
+    try {
+      const r = await runSearch(env, {
+        json: false,
+        account: 'user@gmail.com',
+        mailbox: 'INBOX',
+        query: 'bulk',
+        scope: 'subject',
+        max: 1,
+      });
+      expect(r.rows).toHaveLength(1);
+      expect(r.total).toBe(250); // capped implementation reported 200
+    } finally {
+      env.close();
+    }
+  });
+
+  test('count-only reports the exact total without pulling rows', async () => {
+    const env = withBulk();
+    try {
+      const r = await runSearch(env, {
+        json: false,
+        account: 'user@gmail.com',
+        mailbox: 'INBOX',
+        query: 'bulk',
+        scope: 'subject',
+        max: 10,
+        countOnly: true,
+      });
+      expect(r.rows).toHaveLength(0);
+      expect(r.total).toBe(250);
+    } finally {
+      env.close();
+    }
+  });
+
+  test('searchSubjectIds excludes deleted messages like searchSubject', () => {
+    const env = new EnvelopeIndex(buildEnvelopeFixture());
+    try {
+      // Message 401 ("Deleted draft") is deleted (flags & 2) — not counted.
+      const ids = env.searchSubjectIds({
+        mailboxUrlLike: '%gview@gmail.com/[Gmail]/All Mail',
+        query: 'Deleted draft',
+      });
+      expect(ids).toEqual([]);
+    } finally {
+      env.close();
+    }
   });
 });

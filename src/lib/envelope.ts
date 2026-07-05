@@ -252,6 +252,51 @@ export class EnvelopeIndex {
   }
 
   /**
+   * IDs of ALL messages matching a subject search — same WHERE as
+   * searchSubject but with no LIMIT and no display joins hydrated, so it
+   * stays cheap even for tens of thousands of matches. Used to report an
+   * exact `total` where searchSubject's over-fetch cap would undercount.
+   */
+  searchSubjectIds(opts: {
+    mailboxUrlLike: string;
+    query?: string;
+    filters?: EnvelopeFilters;
+  }): number[] {
+    const { conditions, params: filterParams } = buildFilterClause(
+      opts.filters,
+      opts.query,
+    );
+    const extra = conditions.length > 0 ? ` AND ${conditions.join(' AND ')}` : '';
+    const sql =
+      `SELECT DISTINCT id FROM (
+         SELECT m.ROWID as id
+         FROM messages m
+         LEFT JOIN subjects  s ON m.subject = s.ROWID
+         LEFT JOIN addresses a ON m.sender  = a.ROWID
+         JOIN      mailboxes mb ON m.mailbox = mb.ROWID
+         WHERE mb.url LIKE ? AND mb.source IS NULL AND (m.flags & 2) = 0${extra}
+         UNION ALL
+         SELECT m.ROWID as id
+         FROM labels l
+         JOIN      messages m  ON l.message_id = m.ROWID
+         JOIN      mailboxes mb ON l.mailbox_id = mb.ROWID
+         LEFT JOIN subjects  s ON m.subject = s.ROWID
+         LEFT JOIN addresses a ON m.sender  = a.ROWID
+         WHERE mb.url LIKE ? AND mb.source IS NOT NULL AND (m.flags & 2) = 0${extra}
+       )`;
+    const params: (string | number)[] = [
+      opts.mailboxUrlLike,
+      ...filterParams,
+      opts.mailboxUrlLike,
+      ...filterParams,
+    ];
+    return this.db
+      .query<{ id: number }, (string | number)[]>(sql)
+      .all(...params)
+      .map((r) => r.id);
+  }
+
+  /**
    * Attach each message's user labels (Gmail-style categories) in place, via
    * the `labels` table joined to `mailboxes`. System mailboxes (INBOX,
    * [Gmail]/*) are excluded, so what's left is the categorization the user
