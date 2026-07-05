@@ -4,6 +4,7 @@
 import { Command } from 'commander';
 import pkg from '../package.json';
 import { configureColor } from './lib/color.ts';
+import { loadConfigOrWarn } from './lib/config.ts';
 import { canReadMailDir, promptFullDiskAccess } from './lib/osascript.ts';
 import {
   resolveAccountSelector,
@@ -58,8 +59,13 @@ function withInlineScript<T>(content: string, fn: (path: string) => T): T {
 // mailbox under every account. Set MACMAIL_DEFAULT_ACCOUNT to a description /
 // email / UUID to scope to the account you use most. Write commands (mark /
 // reply) can't act on "all accounts" — they require an explicit selector.
-const DEFAULT_ACCOUNT = process.env.MACMAIL_DEFAULT_ACCOUNT ?? '';
-const DEFAULT_MAILBOX = process.env.MACMAIL_DEFAULT_MAILBOX ?? 'INBOX';
+// Config file supplies defaults below the env vars — precedence is
+// flag > env > config file > built-in.
+const CONFIG = loadConfigOrWarn();
+const DEFAULT_ACCOUNT =
+  process.env.MACMAIL_DEFAULT_ACCOUNT ?? CONFIG.defaultAccount ?? '';
+const DEFAULT_MAILBOX =
+  process.env.MACMAIL_DEFAULT_MAILBOX ?? CONFIG.defaultMailbox ?? 'INBOX';
 
 function requireFda(): void {
   if (canReadMailDir()) return;
@@ -145,11 +151,13 @@ read, mark, and reply. Run 'macmail <command> --help' for per-command flags.`,
   );
 
 // Colors are on by default on a TTY; turn them off with --no-color, NO_COLOR,
-// --json, or by piping. Resolve once before each command's action runs.
+// --json, or by piping. The config `color` mode ("always"/"never"/"auto") sets
+// the baseline. Resolve once before each command's action runs.
 program.hook('preAction', (thisCommand, actionCommand) => {
   configureColor({
     color: thisCommand.opts().color,
     json: Boolean(actionCommand.opts().json),
+    mode: CONFIG.color,
   });
 });
 
@@ -274,6 +282,7 @@ YYYY-MM-DD, MM-DD, or a token (today/yesterday/Nd/Nw) at local midnight.`,
   )
   .option('--max <n>', 'maximum rows when not --count-only', '10')
   .option('--full', 'show the full "Name <email>" sender (default: name only)')
+  .option('--no-full', 'force the compact name-only sender (overrides config)')
   .action(async (query: string | undefined, opts) => {
     requireFda();
     const scope = opts.in as SearchScope;
@@ -344,14 +353,14 @@ YYYY-MM-DD, MM-DD, or a token (today/yesterday/Nd/Nw) at local midnight.`,
       countOnly: !!opts.countOnly,
       snippet,
       body,
-      full: !!opts.full,
+      full: opts.full ?? CONFIG.full ?? false,
     });
     process.stdout.write(
       formatSearchOutput(outcome, {
         json: !!opts.json,
         max,
         countOnly: !!opts.countOnly,
-        full: !!opts.full,
+        full: opts.full ?? CONFIG.full ?? false,
       }),
     );
   });
@@ -374,6 +383,7 @@ Examples:
   .option('--mailbox <name>', 'trailing mailbox path component (default: $MACMAIL_DEFAULT_MAILBOX or "INBOX")', DEFAULT_MAILBOX)
   .option('--max <n>', 'maximum results', '20')
   .option('--full', 'show the full "Name <email>" sender (default: name only)')
+  .option('--no-full', 'force the compact name-only sender (overrides config)')
   .action((opts) => {
     requireFda();
     const max = parseIntStrict(opts.max, '--max');
@@ -390,7 +400,7 @@ Examples:
         account: acct.value,
         mailbox: opts.mailbox,
         max,
-        full: !!opts.full,
+        full: opts.full ?? CONFIG.full ?? false,
       }),
     );
   });
