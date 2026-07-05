@@ -150,8 +150,9 @@ Examples:
     $ macmail reply 2197647 --body 'On it' --yes
     $ macmail send --to bob@example.com --subject 'Lunch?' --body '12:30?' --dry-run
 
-The id in the first column of triage / search output is what you pass to
-read, mark, and reply. Run 'macmail <command> --help' for per-command flags.`,
+The id — the yellow column after the subject in triage / search output — is
+what you pass to read, mark, and reply. Run 'macmail <command> --help' for
+per-command flags.`,
   );
 
 // Colors are on by default on a TTY; turn them off with --no-color, NO_COLOR,
@@ -227,7 +228,7 @@ Examples:
   $ macmail read 2197588 --html     # HTML body instead of plain text
   $ macmail read 2197588 --json     # all fields as one JSON object
 
-The id comes from the first column of triage / search output.`,
+The id comes from the yellow column after the subject in triage / search output.`,
   )
   .option('--json', 'JSON output with all fields')
   .option('--headers', 'prepend From/To/Date/Subject/Message-ID block')

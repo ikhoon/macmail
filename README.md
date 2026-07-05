@@ -29,7 +29,7 @@
 - 🔌 **No cloud, no setup** — no Gmail API, no IMAP, no OAuth; reads work offline, even with Mail.app closed.
 - 🌏 **Decodes everything** — MIME, base64, quoted-printable; Korean and any other non-ASCII subject or body.
 - 🔎 **Real search** — subjects or full bodies, with sender / date / unread / flagged filters and snippets.
-- 🤖 **Built for scripts & LLMs** — `--json` (NDJSON) on every command; pipe straight into `jq` or an agent.
+- 🤖 **Built for scripts & LLMs** — `--json` (NDJSON) on every read command; pipe straight into `jq` or an agent.
 - ✍️ **Safe writes** — `mark` / `send` / `reply` go through your own Mail.app; preview with `--dry-run`.
 
 <p align="center">
@@ -85,7 +85,7 @@ Everything you need for daily use. Copy, paste, adjust.
 # DISCOVER ─────────────────────────────────────────────────────────────
 macmail accounts                          # which accounts exist (name / email / type)
 macmail mailboxes --filter Work           # mailboxes in the "Work" account
-export MACMAIL_DEFAULT_ACCOUNT=Work       # optional: scope reads to one account (add to ~/.zshrc)
+export MACMAIL_DEFAULT_ACCOUNT=Work       # optional for reads (else all accounts); REQUIRED by mark/reply
 
 # TRIAGE (unread, newest first) ─────────────────────────────────────────
 macmail triage                            # unread INBOX — all accounts, or your default if set
@@ -105,14 +105,14 @@ macmail read 2197647                      # print the body (id comes from triage
 macmail read 2197647 --headers            # with From/To/Date/Subject
 
 # WRITE (preview first, then commit) ────────────────────────────────────
-macmail mark 2197647 read --dry-run       # see what would happen
-macmail mark 2197647 read --yes           # actually mark it read
-macmail reply 2197647 --body "On it 👍" --yes
+macmail mark 2197647 read --account Work --dry-run   # see what would happen
+macmail mark 2197647 read --account Work --yes       # actually mark it read
+macmail reply 2197647 --body "On it 👍" --account Work --yes   # (--account not needed with the export above)
 macmail send --to bob@example.com --subject "Lunch?" --body "12:30?" --dry-run
 ```
 
-> **The message `id`** in the first column of `triage` / `search` output is what
-> you pass to `read`, `mark`, and `reply`.
+> **The message `id`** — the yellow column after the subject in `triage` /
+> `search` output — is what you pass to `read`, `mark`, and `reply`.
 
 ---
 
@@ -127,8 +127,9 @@ Two kinds of commands:
 
 Common conventions:
 
-- `--json` on every command → **NDJSON** (one JSON object per line), for `jq`.
-- **Colored output** in a terminal — cyan senders, dim dates, a yellow `DRY-RUN`, and
+- `--json` on every **read** command → **NDJSON** (one JSON object per line), for `jq`.
+  Write commands print plain text.
+- **Colored output** in a terminal — cyan senders, green dates, a yellow `DRY-RUN`, and
   clickable GitHub `PR #N` links. Off automatically when piped or with `--json`; disable
   it explicitly with `--no-color` or the `NO_COLOR` env var.
 - `--account` / `--mailbox` default to `$MACMAIL_DEFAULT_ACCOUNT` / `$MACMAIL_DEFAULT_MAILBOX` (see [Configuration](#configuration)). On read commands (`triage` / `search`), an unset `--account` spans **all** accounts.
@@ -189,9 +190,9 @@ Unread messages in a mailbox, newest first. Your morning inbox scan. With no
 
 ```console
 $ macmail triage --account Work --max 3
-2197647   CI Bot <ci@example.com>           Build #1242 failed: deploy …   2026-06-01T16:17:23+09:00
-2197621   GitHub <noreply@github.com>       PR #4823 review requested       2026-06-01T15:21:06+09:00
-2197588   Jira <jira@example.com>           [PROJ-1201] assigned to you     2026-06-01T14:02:10+09:00
+2026-06-01 16:17  G/ci      CI Bot  Build #1242 failed: deploy …  2197647
+2026-06-01 15:21  G/github  GitHub  PR #4823 review requested     2197621
+2026-06-01 14:02  INBOX     Jira    [PROJ-1201] assigned to you   2197588
 ```
 
 Columns: `date` (local time), `sender`, `subject`, `id` — date first for
@@ -219,6 +220,7 @@ macmail triage --json | jq -r .subject  # subjects only
 | `--account <pattern>` | `$MACMAIL_DEFAULT_ACCOUNT` (else **all accounts**) | Account name / email / UUID |
 | `--mailbox <name>` | `$MACMAIL_DEFAULT_MAILBOX` or `INBOX` | Mailbox name |
 | `--max <n>` | `20` | Max results |
+| `--full` / `--no-full` | config `full` | Full `Name <email>` sender + account email (vs compact names) |
 | `--json` | — | NDJSON output |
 
 ---
@@ -231,7 +233,7 @@ Print one message. The `id` comes from `triage` or `search`.
 $ macmail read 2197588 --headers
 From: Jira <jira@example.com>
 To: you@company.com
-Date: 2026-06-01T14:02:10+09:00
+Date: 2026-06-01 14:02
 Subject: [PROJ-1201] assigned to you
 Message-ID: <JIRA.1201.abc@example.com>
 
@@ -261,7 +263,7 @@ with **structured filters** (sender, recipient, date range, unread, flagged).
 
 ```console
 $ macmail search 'release notes' --in body --mailbox JIRA --days 14 --snippet
-2196120   Jira <jira@example.com>   [PROJ-980] Release notes for 3.4   2026-05-28T09:11:02+09:00   …please review the release notes before Friday's cut…
+2026-05-28 09:11  Jira  [PROJ-980] Release notes for 3.4  2196120  …please review the release notes before Friday's cut…
 ```
 
 Default scope is `--in subject`; default `--max` is `10`. Columns match
@@ -353,6 +355,7 @@ When results are capped, text mode prints a trailer so you know:
 | `--count-only` | — | Print `total` (and `examined` for body), then exit |
 | `--snippet [chars]` | `80` | ±N chars of body context per hit (`body`/`both`) |
 | `--body [chars]` | full | Attach the decoded body (truncate to N when given) |
+| `--full` / `--no-full` | config `full` | Full `Name <email>` sender + account email (vs compact names) |
 | `--json` | — | NDJSON; final line is a `{"_summary": {…}}` object |
 
 ---
@@ -440,6 +443,7 @@ macmail reply 2197588 --body "draft this" --draft    # save reply to Drafts
 |---|:---:|---|
 | `<id>` | ✓ | Message to reply to |
 | `--body <text>` | ✓ | Reply body |
+| `--account` / `--mailbox` | ✓ | Where the message lives — an account is required (flag, env var, or config default) |
 | `--all` | | Reply to all recipients |
 | `--draft` | | Save to Drafts instead of sending |
 | `--dry-run` | | Preview only |
@@ -517,12 +521,15 @@ Any other value is a **custom moment/dayjs pattern**, e.g. `"MM/DD HH:mm"` →
 
 ## Scripting with JSON
 
-Every command supports `--json` (NDJSON — one object per line). `search` appends
+Every **read** command (`accounts` `mailboxes` `triage` `read` `search`) supports
+`--json` (NDJSON — one object per line); write commands print plain text. When a
+`--json` search has no matches it prints nothing — use `--count-only`, which
+always emits the summary, to distinguish zero from missing. `search` appends
 a final `{"_summary": …}` line with `shown`, `total`, and (for body searches)
 `examined`.
 
 ```bash
-# Subjects of today's unread mail
+# Subjects of unread mail
 macmail triage --json | jq -r '.subject'
 
 # Sender + subject of body-search hits, skipping the summary line
@@ -535,7 +542,7 @@ macmail search --unread --count-only --json | jq '._summary.total'
 # Mark every unread message from a noisy sender as read
 macmail search --sender noreply@ci.example.com --unread --json \
   | jq -r 'select(._summary | not) | .id' \
-  | xargs -I{} macmail mark {} read --yes
+  | xargs -I{} macmail mark {} read --account Work --yes   # mark needs an account
 ```
 
 ---
@@ -583,7 +590,7 @@ source ~/.local/share/bash-completion/completions/macmail
 
 | Symptom | Fix |
 |---|---|
-| **"Full Disk Access required"** / can't read mail | Grant FDA to `~/.local/bin/macmail` itself — see [Full Disk Access](#full-disk-access-one-time). |
+| **"Full Disk Access required"** / can't read mail | Run `macmail fda` and switch **macmail** on in the list — see [Full Disk Access](#full-disk-access-one-time). |
 | **Body search finds nothing** | The body isn't cached locally. Open the message once in Mail.app (or change its cache policy), then retry. |
 | **`mark` / `send` / `reply` does nothing** | These need Mail.app; it auto-launches on first use. Confirm with `--dry-run` first. |
 | **Wrong account / empty results** | Run `macmail accounts`, then set `MACMAIL_DEFAULT_ACCOUNT` or pass `--account`. |
@@ -603,7 +610,7 @@ macmail fda        # pops the dialog and opens Settings (any read command does t
 1. Run `macmail fda` and click **Open Settings**.
 2. Switch **macmail** on in the Full Disk Access list — spot it by its icon.
 
-macmail re-execs itself as its own TCC *responsible process* (codesign identity
+macmail re-execs itself as its own TCC *responsible process* (codesign identifier
 `kr.ikhoon.macmail`), so the grant is keyed to **macmail**, not the launching
 terminal — it works from any terminal afterward (Terminal, iTerm, VS Code, …),
 and macmail already appears in the list by name and icon (no need to add it with
@@ -631,8 +638,11 @@ macmail is local-first by design — nothing about your mail leaves your machine
   `mark` drive Mail via AppleScript, so macmail never handles your passwords,
   tokens, or SMTP credentials.
 - **macmail keeps no store of your mail** — no database or cache of messages;
-  configuration is just environment variables. The only files it writes are the
-  shell completions you install and short-lived temp scripts for AppleScript writes.
+  configuration is environment variables plus an optional
+  `~/.config/macmail/config.json` that macmail only reads. The files it writes:
+  the shell completions you install, short-lived temp scripts for AppleScript
+  writes, and (at install time) the signing-cert backup
+  `~/.config/macmail/MacmailSign.p12`.
 
 ---
 
@@ -693,7 +703,10 @@ AppleScript runtime, which crashes on body searches over a large inbox.
   message IDs, then each candidate's storage `.emlx` is read via `mailparser`
   and grepped. View mailboxes resolve to their storage mbox automatically.
   Bodies Mail.app hasn't downloaded are invisible (a Mail.app limitation).
-- **`read <id>`** — locates `<id>.emlx` under `~/Library/Mail`, parses with
+- **`read <id>`** — resolves the message's storage mailbox via the Envelope
+  Index and computes the sharded `Data/…/Messages/<id>.emlx` location directly
+  (also `<id>.partial.emlx` for partially-downloaded messages), falling back to
+  a directory walk — whole-store only if the index is unavailable. Parses with
   `mailparser` (correct MIME / base64 / quoted-printable decoding).
 - **`mark` / `send` / `reply`** — wrap embedded AppleScript via `osascript`;
   Mail.app is auto-launched on first use.
@@ -763,21 +776,28 @@ macmail/
 │   ├── cli.ts                  # commander entry point
 │   ├── commands/               # one handler per subcommand
 │   │   ├── accounts.ts  mailboxes.ts  triage.ts  search.ts
-│   │   └── read.ts  mark.ts  send.ts  reply.ts
+│   │   └── read.ts  mark.ts  send.ts  reply.ts  completions.ts
 │   ├── lib/
 │   │   ├── mail-data.ts        # account discovery (V<N> dirs + Accounts4.sqlite)
-│   │   ├── envelope.ts         # SQLite Envelope Index wrapper
+│   │   ├── envelope.ts         # SQLite Envelope Index wrapper (+ labels)
 │   │   ├── emlx.ts             # .emlx parser (mailparser + flags)
-│   │   ├── output.ts           # text/NDJSON formatters
+│   │   ├── output.ts           # formatters: aligned text / NDJSON, date styles
+│   │   ├── message-rows.ts     # shared triage/search column layout
+│   │   ├── color.ts            # TTY-gated ANSI palette + link affordance
+│   │   ├── links.ts            # GitHub PR/issue → OSC 8 hyperlinks
+│   │   ├── config.ts           # ~/.config/macmail/config.json defaults
 │   │   ├── confirm.ts          # /dev/tty y/N prompt
+│   │   ├── disclaim.ts         # TCC responsible-process re-exec (FDA)
 │   │   ├── osascript.ts        # runAppleScript + FDA gate
 │   │   └── applescripts.ts     # embeds the write-op AppleScript bodies
 │   └── types/
 ├── lib/applescript/            # hand-edited write-op AppleScripts
 │   └── mark.applescript  send.applescript  reply.applescript
 ├── completions/                # _macmail (zsh), macmail.bash (bash)
+├── demo/                       # mock + vhs tape for the README gif
+├── scripts/                    # make-signing-cert.sh, package-release.sh, …
 ├── tests/                      # bun test + smoke.sh against the binary
-├── install.sh  package.json  tsconfig.json  LICENSE
+├── install.sh  Info.plist  assets/  package.json  tsconfig.json  LICENSE
 ```
 
 </details>

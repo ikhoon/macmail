@@ -1,45 +1,58 @@
 #!/usr/bin/env bash
 # Mock macmail for the demo GIF (see ../demo.tape). Prints fictional output with
-# the real color scheme baked in (yellow id, cyan sender, bold subject, green
-# date; dim labels for read; yellow DRY-RUN) so the recording shows macmail's
-# colored output. Never touches ~/Library/Mail. On PATH via demo/bin during
-# `vhs demo/demo.tape` so it shadows the real binary.
+# the real rendering baked in — date-first aligned columns (readable dates),
+# account + Gmail-label (mailbox) columns, compact sender names, bright colors,
+# dotted-underline OSC 8 links on PR refs, yellow DRY-RUN — so the recording
+# matches what macmail actually prints. Never touches ~/Library/Mail. On PATH
+# via demo/bin during `vhs demo/demo.tape` so it shadows the real binary.
 set -euo pipefail
 
-Y=$'\033[33m'  # id — yellow
-C=$'\033[36m'  # sender — cyan
+Y=$'\033[93m'  # id — bright yellow
+C=$'\033[96m'  # sender — bright cyan
 B=$'\033[1m'   # subject — bold
-G=$'\033[32m'  # date — green
-D=$'\033[2m'   # labels — dim
+G=$'\033[92m'  # date — bright green
+M=$'\033[95m'  # account — bright magenta
+L=$'\033[94m'  # mailbox label — bright blue
+D=$'\033[90m'  # secondary — gray
 R=$'\033[0m'
+
+# Clickable link affordance: OSC 8 hyperlink + dotted underline in soft blue,
+# exactly as lib/links.ts + lib/color.ts emit.
+link() { # url text
+  printf '\033]8;;%s\a\033[4:4;38;5;110m%s\033[24;39m\033]8;;\a' "$1" "$2"
+}
 
 # Pad each field to a fixed width first, then wrap it in color, so the ANSI
 # codes (zero-width in a terminal) don't throw the columns off.
-row() { # id sender subject date
-  printf '%s%-8s%s %s%-34s%s %s%-40s%s %s%s%s\n' \
-    "$Y" "$1" "$R" "$C" "$2" "$R" "$B" "$3" "$R" "$G" "$4" "$R"
+row() { # date account mailbox sender(pre-padded) subject(pre-padded) id
+  printf '%s%s%s  %s%-8s%s  %s%-10s%s  %s%s%s  %s%s%s  %s%s%s
+' \
+    "$G" "$1" "$R" "$M" "$2" "$R" "$L" "$3" "$R" "$C" "$4" "$R" "$B" "$5" "$R" "$Y" "$6" "$R"
 }
 
 case "${1:-}" in
   triage)
-    row 2231677 "Copilot <notifications@github.com>" "[ikhoon/macrec] Realtime engine (PR #19)" "2026-07-04T21:12:05+09:00"
-    row 2231670 "Copilot <notifications@github.com>" "[ikhoon/macmail] Colored output (PR #6)" "2026-07-04T21:01:35+09:00"
-    row 2231402 "Jira <jira@company.com>"            "[DX-1420] assigned to you"               "2026-07-04T08:47:10+09:00"
+    row "2026-07-06 09:12" "Work    " "G/ci"       "Acme CI  " "[acme/gateway] Build #512 failed on main ($(link https://github.com/acme/gateway/pull/42 'PR #42')) " 1048214
+    row "2026-07-06 09:01" "Work    " "G/github"   "GitHub   " "[acme/gateway] Review requested: rate limiter     " 1048209
+    row "2026-07-06 08:45" "Personal" "G/shopping" "우리마트 " "[우리마트] 주문이 정상적으로 접수되었습니다.      " 1048201
+    row "2026-07-06 08:20" "Personal" "INBOX"      "김민준   " "주말 등산 사진 공유해요                           " 1048195
     ;;
   search)
-    # Korean query — shows non-ASCII decoding, same colors
-    printf '%s%-8s%s %s%s%s   %s%s%s   %s%s%s\n' \
-      "$Y" 2231310 "$R" "$C" "김영희 <yhkim@company.com>" "$R" "$B" "팀 워크숍 초대장 (7/18)" "$R" "$G" "2026-07-03T18:22:05+09:00" "$R"
+    # Korean query — non-ASCII decoding + width-aware alignment
+    row "2026-07-05 18:22" "Work    " "G/team"     "박서연   " "팀 워크숍 초대장 (7/18)                           " 1047310
+    row "2026-07-01 12:33" "Personal" "G/shopping" "우리마트 " "[우리마트] 주문해주셔서 감사합니다.               " 1046885
+    printf '%s(showing 2 of 41 — narrow filters if too many)%s
+' "$D" "$R"
     ;;
   read)
-    printf '%sFrom:%s    %sJira <jira@company.com>%s\n' "$D" "$R" "$C" "$R"
-    printf '%sTo:%s      you@company.com\n' "$D" "$R"
-    printf '%sDate:%s    %s2026-07-04T08:47:10+09:00%s\n' "$D" "$R" "$G" "$R"
-    printf '%sSubject:%s %s[DX-1420] assigned to you%s\n' "$D" "$R" "$B" "$R"
-    printf '\nYou'\''ve been assigned DX-1420 "Add --color to macmail output".\n'
+    printf '%sFrom:%s %s박서연 <syp@example.com>%s\n' "$D" "$R" "$C" "$R"
+    printf '%sTo:%s you@example.com\n' "$D" "$R"
+    printf '%sDate:%s %s2026-07-05 18:22%s\n' "$D" "$R" "$G" "$R"
+    printf '%sSubject:%s %s팀 워크숍 초대장 (7/18)%s\n' "$D" "$R" "$B" "$R"
+    printf '\n7/18(금) 오후 2시, 3층 라운지에서 하반기 워크숍이 열립니다. 참석 여부를 알려주세요!\n'
     ;;
   mark)
-    printf '%sDRY-RUN:%s would mark message 2231670 (Work/INBOX) as read\n' "$Y" "$R"
+    printf '%sDRY-RUN:%s would mark message 1048214 (Work/INBOX) as read\n' "$Y" "$R"
     ;;
   *)
     echo "macmail: (demo mock) unhandled command: ${*:-}" >&2
