@@ -4,6 +4,14 @@ import { linkifyGitHub, osc8 } from '../../src/lib/links.ts';
 
 afterEach(() => setColorEnabled(false));
 
+describe('osc8', () => {
+  it('terminates the sequence with BEL (\\x07), not ST — widest terminal support', () => {
+    const out = osc8('https://example.com/x', 'label');
+    expect(out).toBe('\x1b]8;;https://example.com/x\x07label\x1b]8;;\x07');
+    expect(out).not.toContain('\x1b\\'); // no ST terminator
+  });
+});
+
 describe('linkifyGitHub', () => {
   it('no-ops when rich output is off (piped / --json / --no-color)', () => {
     setColorEnabled(false);

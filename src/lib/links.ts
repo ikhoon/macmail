@@ -12,11 +12,15 @@
 import { colorIsEnabled } from './color.ts';
 
 const OSC = '\x1b]8;;';
-const ST = '\x1b\\';
+// BEL terminates the OSC sequence. It's more widely recognized than the ST
+// (`ESC \`) form — some terminals and tmux don't parse ST, which leaks the URL
+// as visible text ("smeared href") and breaks the click. BEL works everywhere
+// OSC 8 does.
+const BEL = '\x07';
 
 /** Wrap `text` in an OSC 8 hyperlink to `url`. */
 export function osc8(url: string, text: string): string {
-  return `${OSC}${url}${ST}${text}${OSC}${ST}`;
+  return `${OSC}${url}${BEL}${text}${OSC}${BEL}`;
 }
 
 /**
