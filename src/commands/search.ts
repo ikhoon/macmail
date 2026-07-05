@@ -108,8 +108,8 @@ function formatRows(msgs: MessageSummary[], json: boolean, full = false): string
     snippet: dim,
   };
   const fields = msgs.some((m) => m.snippet)
-    ? ['id', 'sender', 'subject', 'date', 'snippet']
-    : ['id', 'sender', 'subject', 'date'];
+    ? ['date', 'sender', 'subject', 'id', 'snippet']
+    : ['date', 'sender', 'subject', 'id'];
   const rowOf = (m: MessageSummary) => ({
     id: m.id,
     sender: senderOf(m),
