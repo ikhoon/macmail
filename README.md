@@ -481,12 +481,23 @@ path in `$MACMAIL_CONFIG`):
 | `defaultMailbox` | default `--mailbox` |
 | `color` | `"auto"` (color on a TTY — default), `"always"`, or `"never"` |
 | `full` | default for `--full` (show the full `Name <email>` sender) |
+| `dateFormat` | text date style — see below |
 
 Every value is a **default** — precedence is **flag > env var > config file >
 built-in**. So `MACMAIL_DEFAULT_ACCOUNT` overrides `defaultAccount`, and a flag
 overrides both (`--no-color` / `--no-full` beat `"color": "always"` / `"full":
 true`). A missing file is fine (you get the built-ins); unknown keys are ignored;
 a malformed file is skipped with a warning.
+
+**Date style** (`dateFormat`) — how dates render in text output (`--json` always
+stays UTC ISO for scripts). `--iso` forces the machine form for one run.
+
+| `dateFormat` | Example |
+|---|---|
+| `"readable"` (default) | `2026-07-06 09:30` |
+| `"iso"` | `2026-07-06T09:30:05+09:00` |
+| `"friendly"` | `Mon Jul 6 09:30` |
+| `"compact"` | `Jul 6 09:30` (adds the year when it isn't the current one) |
 
 ---
 

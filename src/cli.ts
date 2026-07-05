@@ -4,6 +4,7 @@
 import { Command } from 'commander';
 import pkg from '../package.json';
 import { configureColor } from './lib/color.ts';
+import { configureDateStyle } from './lib/output.ts';
 import { loadConfigOrWarn } from './lib/config.ts';
 import { canReadMailDir, promptFullDiskAccess } from './lib/osascript.ts';
 import {
@@ -120,6 +121,7 @@ program
   .description('macOS Mail.app CLI — file-based reads, AppleScript writes')
   .version(pkg.version)
   .option('--no-color', 'disable colored output (also honors the NO_COLOR env var)')
+  .option('--iso', 'render text dates as full local ISO 8601 (overrides config dateFormat)')
   .addHelpText(
     'after',
     `
@@ -159,6 +161,9 @@ program.hook('preAction', (thisCommand, actionCommand) => {
     json: Boolean(actionCommand.opts().json),
     mode: CONFIG.color,
   });
+  // Text date style: --iso forces iso, else the config's dateFormat, else the
+  // built-in "readable". (--json / piped output always stays UTC ISO.)
+  configureDateStyle(thisCommand.opts().iso ? 'iso' : CONFIG.dateFormat);
 });
 
 program

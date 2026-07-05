@@ -76,12 +76,12 @@ describe('formatRead', () => {
     expect(out.endsWith('Body text\n')).toBe(true);
   });
 
-  test('--headers shows Date in local time; json date stays UTC', () => {
+  test('--headers shows Date in the readable local style; json date stays UTC', () => {
     const text = formatRead(mkParsed(), { json: false, headers: true, html: false });
     const shown = text.match(/^Date: (.+)$/m)?.[1] ?? '';
-    expect(shown).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/);
+    // Default readable style: local `YYYY-MM-DD HH:MM`, no seconds/offset/Z.
+    expect(shown).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
     expect(shown.endsWith('Z')).toBe(false);
-    expect(new Date(shown).getTime()).toBe(new Date('2026-05-27T10:00:00Z').getTime());
 
     const obj = JSON.parse(formatRead(mkParsed(), { json: true, headers: false, html: false }));
     expect(obj.date).toBe('2026-05-27T10:00:00.000Z');

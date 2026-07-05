@@ -19,6 +19,8 @@ export interface MacmailConfig {
   color?: string;
   /** Default for `--full` (show the full `Name <email>` sender). */
   full?: boolean;
+  /** Text date style: "readable" (default), "iso", "friendly", "compact". */
+  dateFormat?: string;
 }
 
 /** The config path per the resolution order above. */
@@ -49,6 +51,7 @@ export function parseConfig(text: string): MacmailConfig {
     defaultAccount: str('defaultAccount'),
     defaultMailbox: str('defaultMailbox'),
     color: str('color'),
+    dateFormat: str('dateFormat'),
   };
   if (o.full !== undefined) {
     if (typeof o.full !== 'boolean') throw new Error('config: "full" must be a boolean');
@@ -56,6 +59,12 @@ export function parseConfig(text: string): MacmailConfig {
   }
   if (cfg.color !== undefined && !['auto', 'always', 'never'].includes(cfg.color.toLowerCase())) {
     throw new Error('config: "color" must be "auto", "always", or "never"');
+  }
+  if (
+    cfg.dateFormat !== undefined &&
+    !['readable', 'iso', 'friendly', 'compact'].includes(cfg.dateFormat.toLowerCase())
+  ) {
+    throw new Error('config: "dateFormat" must be "readable", "iso", "friendly", or "compact"');
   }
   return cfg;
 }

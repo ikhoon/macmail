@@ -1,9 +1,11 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test, it } from 'bun:test';
 import {
   formatRecords,
   displayWidth,
   truncateWidth,
   senderDisplayName,
+  formatDate,
+  configureDateStyle,
 } from '../src/lib/output.ts';
 
 describe('formatRecords', () => {
@@ -51,7 +53,7 @@ describe('formatRecords', () => {
     expect(out).toBe('x\t\t\n');
   });
 
-  test('Date renders as local ISO+offset in text mode, UTC in json mode', () => {
+  test('Date renders in the readable style in text mode, UTC in json mode', () => {
     const d = new Date('2026-05-27T10:00:00Z');
 
     // JSON stays machine-readable UTC (jq pipelines depend on it).
@@ -59,13 +61,10 @@ describe('formatRecords', () => {
       '{"when":"2026-05-27T10:00:00.000Z"}\n',
     );
 
-    // Text is for humans: local-zone ISO 8601. The offset is dropped when it
-    // matches the reader's current one (as here), leaving no trailing Z — but
-    // the same absolute instant. Asserted by shape + round-trip.
+    // Text default is the readable style: local `YYYY-MM-DD HH:MM`, no seconds
+    // or offset. Asserted by shape (holds in any timezone).
     const text = formatRecords([{ when: d }], { json: false }).trimEnd();
-    expect(text).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/);
-    expect(text.endsWith('Z')).toBe(false);
-    expect(new Date(text).getTime()).toBe(d.getTime());
+    expect(text).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
   });
 
   test('numbers stringify in text mode and stay numeric in json mode', () => {
@@ -109,5 +108,33 @@ describe('display helpers', () => {
     expect(senderDisplayName('Alice <a@x.com>')).toBe('Alice');
     expect(senderDisplayName('"Bob B" <b@x.com>')).toBe('Bob B');
     expect(senderDisplayName('c@x.com')).toBe('c@x.com');
+  });
+});
+
+describe('formatDate styles', () => {
+  // A fixed local wall-clock instant (constructed in local tz so components are
+  // stable regardless of where the test runs).
+  const d = new Date(2026, 6, 6, 9, 30, 5); // 2026-07-06 09:30:05 local, a Monday
+  const now = new Date(2026, 6, 20);
+
+  it('readable (default): date + HH:MM, no seconds/offset', () => {
+    expect(formatDate(d, 'readable', now)).toBe('2026-07-06 09:30');
+  });
+  it('iso: full local ISO with offset', () => {
+    expect(formatDate(d, 'iso', now)).toMatch(/^2026-07-06T09:30:05[+-]\d{2}:\d{2}$/);
+  });
+  it('friendly: weekday + month name + HH:MM', () => {
+    expect(formatDate(d, 'friendly', now)).toBe('Mon Jul 6 09:30');
+  });
+  it('compact: month name + day + HH:MM, adding the year only when not this year', () => {
+    expect(formatDate(d, 'compact', now)).toBe('Jul 6 09:30');
+    expect(formatDate(new Date(2027, 0, 2, 8, 5, 0), 'compact', now)).toBe('Jan 2 2027 08:05');
+  });
+  it('configureDateStyle sets the module default; unknown falls back to readable', () => {
+    configureDateStyle('friendly');
+    expect(formatDate(d, undefined, now)).toBe('Mon Jul 6 09:30');
+    configureDateStyle('nonsense');
+    expect(formatDate(d, undefined, now)).toBe('2026-07-06 09:30');
+    configureDateStyle(undefined); // reset to readable
   });
 });
