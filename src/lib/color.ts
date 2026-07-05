@@ -42,9 +42,12 @@ export function colorIsEnabled(): boolean {
 }
 
 export const bold = wrap('\x1b[1m');
-// Underline via on/off codes (SGR 4 / 24) rather than a full reset, so it nests
-// inside bold/color without terminating them — used to mark clickable links.
-export const underline = (s: string): string => (enabled && s ? `\x1b[4m${s}\x1b[24m` : s);
+// Subtle link affordance: a dotted underline (SGR 4:4 — degrades to a plain
+// underline on terminals that don't support the extended style) in a soft blue
+// (256-color 110). Uses off-codes (24 underline, 39 default fg) rather than a
+// full reset so it nests inside bold/color. Marks clickable links unobtrusively.
+export const linkText = (s: string): string =>
+  enabled && s ? `\x1b[4:4;38;5;110m${s}\x1b[24;39m` : s;
 // Secondary text: bright-black (a readable gray) rather than SGR 2 "faint",
 // which many terminals render as washed-out/low-contrast.
 export const dim = wrap('\x1b[90m');
