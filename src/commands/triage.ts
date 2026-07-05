@@ -8,9 +8,12 @@ import {
   accountIdFromMailboxUrl,
   type Account,
 } from '../lib/mail-data.ts';
-import { formatRecords } from '../lib/output.ts';
+import { formatRecords, senderDisplayName, truncateWidth } from '../lib/output.ts';
 import { bold, cyan, green, magenta, yellow } from '../lib/color.ts';
 import { linkifyGitHub } from '../lib/links.ts';
+
+/** Max display width for the (name-only) sender column in text mode. */
+const SENDER_WIDTH = 28;
 
 export interface TriageOptions {
   json: boolean;
@@ -20,6 +23,8 @@ export interface TriageOptions {
   /** Mailbox name, matched as the trailing URL path component. */
   mailbox: string;
   max: number;
+  /** Show the full `Name <email>` sender instead of the compact name-only form. */
+  full?: boolean;
 }
 
 /** Build the `mb.url LIKE` pattern used by EnvelopeIndex.triage. An empty
@@ -55,7 +60,12 @@ export function formatTriage(
     msgs.map((m) => {
       const row: Record<string, unknown> = { id: m.id };
       if (multiAccount) row.account = labelOf(m);
-      row.sender = m.sender;
+      // JSON keeps the full sender (scripts need it); text shows a compact
+      // name-only form unless --full is passed.
+      row.sender =
+        opts.json || opts.full
+          ? m.sender
+          : truncateWidth(senderDisplayName(m.sender), SENDER_WIDTH);
       row.subject = m.subject;
       row.date = m.dateReceived;
       return row;
@@ -63,6 +73,7 @@ export function formatTriage(
     {
       json: opts.json,
       fields,
+      align: true,
       styles: {
         id: yellow,
         account: magenta,

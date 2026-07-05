@@ -26,11 +26,14 @@ import {
   findMailVersionDir,
   mailboxUrlToFsPath,
 } from '../lib/mail-data.ts';
-import { formatRecords } from '../lib/output.ts';
+import { formatRecords, senderDisplayName, truncateWidth } from '../lib/output.ts';
 import { bold, cyan, dim, green, yellow } from '../lib/color.ts';
 import { linkifyGitHub } from '../lib/links.ts';
 import { buildMailboxUrlPattern } from './triage.ts';
 import { parseEmlx } from '../lib/emlx.ts';
+
+/** Max display width for the (name-only) sender column in text mode. */
+const SENDER_WIDTH = 28;
 
 export type SearchScope = 'subject' | 'body' | 'both';
 
@@ -50,6 +53,8 @@ export interface SearchOptions {
   /** When set, attach the full (or truncated) decoded text body to each row.
    *  undefined = off, 0 = full, N>0 = truncate to N chars + '…'. */
   body?: number;
+  /** Show the full `Name <email>` sender instead of the compact name-only form. */
+  full?: boolean;
 }
 
 export interface RunBodySearchDeps {
@@ -73,7 +78,7 @@ export interface SearchOutcome {
   examined?: number;
 }
 
-function formatRows(msgs: MessageSummary[], json: boolean): string {
+function formatRows(msgs: MessageSummary[], json: boolean, full = false): string {
   if (json) {
     return formatRecords(
       msgs.map((m) => {
@@ -90,59 +95,39 @@ function formatRows(msgs: MessageSummary[], json: boolean): string {
       { json: true },
     );
   }
-  // Text mode: TSV per row; when a body is attached, drop it on the next
-  // block separated by blank lines + '---' between rows so multi-line
-  // bodies are unambiguous.
-  const anyBody = msgs.some((m) => m.text != null);
+  // Text mode: aligned columns. When a body is attached, drop it on the next
+  // block separated by blank lines + '---' between rows so multi-line bodies
+  // are unambiguous. Sender is name-only unless --full (matches triage).
+  const senderOf = (m: MessageSummary) =>
+    full ? m.sender : truncateWidth(senderDisplayName(m.sender), SENDER_WIDTH);
+  const styles = {
+    id: yellow,
+    sender: cyan,
+    subject: (s: string) => bold(linkifyGitHub(s)),
+    date: green,
+    snippet: dim,
+  };
   const fields = msgs.some((m) => m.snippet)
     ? ['id', 'sender', 'subject', 'date', 'snippet']
     : ['id', 'sender', 'subject', 'date'];
-  if (!anyBody) {
-    return formatRecords(
-      msgs.map((m) => ({
-        id: m.id,
-        sender: m.sender,
-        subject: m.subject,
-        date: m.dateReceived,
-        snippet: m.snippet,
-      })),
-      {
-        json: false,
-        fields,
-        styles: {
-          id: yellow,
-          sender: cyan,
-          subject: (s) => bold(linkifyGitHub(s)),
-          date: green,
-          snippet: dim,
-        },
-      },
-    );
+  const rowOf = (m: MessageSummary) => ({
+    id: m.id,
+    sender: senderOf(m),
+    subject: m.subject,
+    date: m.dateReceived,
+    snippet: m.snippet,
+  });
+  if (!msgs.some((m) => m.text != null)) {
+    return formatRecords(msgs.map(rowOf), { json: false, fields, align: true, styles });
   }
   const blocks: string[] = [];
   for (const m of msgs) {
-    const tsvRow = formatRecords(
-      [
-        {
-          id: m.id,
-          sender: m.sender,
-          subject: m.subject,
-          date: m.dateReceived,
-          snippet: m.snippet,
-        },
-      ],
-      {
-        json: false,
-        fields,
-        styles: {
-          id: yellow,
-          sender: cyan,
-          subject: (s) => bold(linkifyGitHub(s)),
-          date: green,
-          snippet: dim,
-        },
-      },
-    ).trimEnd();
+    const tsvRow = formatRecords([rowOf(m)], {
+      json: false,
+      fields,
+      align: true,
+      styles,
+    }).trimEnd();
     blocks.push(m.text != null ? `${tsvRow}\n\n${m.text}\n` : `${tsvRow}\n`);
   }
   return blocks.join('\n---\n\n');
@@ -448,7 +433,7 @@ export function mergeResults(
  */
 export function formatSearchOutput(
   outcome: SearchOutcome,
-  opts: { json: boolean; max: number; countOnly?: boolean },
+  opts: { json: boolean; max: number; countOnly?: boolean; full?: boolean },
 ): string {
   if (opts.countOnly) {
     if (opts.json) {
@@ -465,7 +450,7 @@ export function formatSearchOutput(
     }
     return lines.join('\n') + '\n';
   }
-  const body = formatRows(outcome.rows, opts.json);
+  const body = formatRows(outcome.rows, opts.json, opts.full);
   if (opts.json) {
     if (outcome.rows.length === 0 && outcome.total === 0) return '';
     const summary: Record<string, number> = {

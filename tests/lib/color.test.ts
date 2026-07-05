@@ -18,7 +18,7 @@ afterEach(() => {
 describe('color gating', () => {
   it('style helpers wrap when enabled, pass through when not', () => {
     setColorEnabled(true);
-    expect(dim('x')).toBe('\x1b[2mx\x1b[0m');
+    expect(dim('x')).toBe('\x1b[90mx\x1b[0m');
     setColorEnabled(false);
     expect(dim('x')).toBe('x');
   });

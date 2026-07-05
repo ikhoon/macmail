@@ -41,6 +41,7 @@ export function formatMailboxes(rows: MailboxRow[], opts: MailboxesOptions): str
       // Text mode shows just the short mailbox name (path tail of the URL);
       // JSON includes the full URL plus totals.
       fields: opts.json ? undefined : ['name'],
+      align: true,
       styles: { name: cyan },
     },
   );

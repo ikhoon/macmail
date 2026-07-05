@@ -17,8 +17,8 @@ describe('triage colored output', () => {
   it('colorizes id/sender and linkifies the PR ref when enabled', () => {
     setColorEnabled(true);
     const out = formatTriage([ghRow] as any, opts, []);
-    expect(out).toContain('\x1b[33m42\x1b[0m'); // yellow id
-    expect(out).toContain('\x1b[36mCopilot'); // cyan sender
+    expect(out).toContain('\x1b[93m42\x1b[0m'); // bright yellow id
+    expect(out).toContain('\x1b[96mCopilot'); // bright cyan sender (name only)
     expect(out).toContain('https://github.com/ikhoon/macmail/pull/6'); // OSC 8 link
   });
 
