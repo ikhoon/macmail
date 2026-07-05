@@ -2,7 +2,13 @@ import { describe, expect, test, beforeAll, afterAll } from 'bun:test';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { findEmlxByName, runReadUnderRoot, formatRead, readViaIndex } from '../../src/commands/read.ts';
+import {
+  findEmlxByName,
+  runReadUnderRoot,
+  formatRead,
+  readViaIndex,
+  shardDirsForId,
+} from '../../src/commands/read.ts';
 import { EnvelopeIndex } from '../../src/lib/envelope.ts';
 import { buildEnvelopeFixture } from '../helpers/envelope-fixture.ts';
 import { parseEmlx, type ParsedEmlx } from '../../src/lib/emlx.ts';
@@ -185,5 +191,86 @@ describe('readViaIndex (indexed fast path)', () => {
   test('returns null when the .emlx is not on disk (cached-miss)', async () => {
     // Message 101 is in the index (same mailbox) but has no file under tmpRoot.
     expect(await readViaIndex(101, opts, env, tmpRoot)).toBeNull();
+  });
+});
+
+describe('shardDirsForId (V10 id-sharded layout)', () => {
+  test('digits of floor(id/1000), most-significant last', () => {
+    expect(shardDirsForId(2232315)).toEqual(['2', '3', '2', '2']); // observed on a real store
+    expect(shardDirsForId(2231914)).toEqual(['1', '3', '2', '2']);
+    expect(shardDirsForId(12345)).toEqual(['2', '1']);
+  });
+  test('ids under 1000 have no shard dirs', () => {
+    expect(shardDirsForId(17)).toEqual([]);
+    expect(shardDirsForId(999)).toEqual([]);
+  });
+});
+
+describe('readViaIndex sharded fast path', () => {
+  let env: EnvelopeIndex;
+  let tmpRoot: string;
+  const opts = { json: false, headers: false, html: false };
+  const UUID = '1481846F-CCC9-4B9E-B0E7-B8B3F4FBD46F';
+
+  beforeAll(() => {
+    const db = buildEnvelopeFixture();
+    // A large-id message in storage mailbox 1 to exercise the shard dirs.
+    db.exec(
+      `INSERT INTO messages (ROWID, sender, subject, mailbox, date_received, flags)
+       VALUES (2232315, 1, 1, 1, 802700000, 0);`,
+    );
+    env = new EnvelopeIndex(db);
+    tmpRoot = mkdtempSync(join(tmpdir(), 'macmail-shard-'));
+    // Real V10 layout: <mbox>/<envelope-uuid>/Data/<shards…>/Messages/<id>.emlx
+    const dir = join(
+      tmpRoot, 'user@gmail.com', 'INBOX.mbox', UUID,
+      'Data', '2', '3', '2', '2', 'Messages',
+    );
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, '2232315.emlx'), buildEmlx('From: a@x.com\n\nsharded body'));
+  });
+  afterAll(() => {
+    env.close();
+    rmSync(tmpRoot, { recursive: true, force: true });
+  });
+
+  test('computes the sharded path directly and reads the message', async () => {
+    const out = await readViaIndex(2232315, opts, env, tmpRoot);
+    expect(out).toContain('sharded body');
+  });
+});
+
+describe('.partial.emlx support (recent messages)', () => {
+  let env: EnvelopeIndex;
+  let tmpRoot: string;
+  const opts = { json: false, headers: false, html: false };
+  const UUID = '1481846F-CCC9-4B9E-B0E7-B8B3F4FBD46F';
+
+  beforeAll(() => {
+    const db = buildEnvelopeFixture();
+    db.exec(
+      `INSERT INTO messages (ROWID, sender, subject, mailbox, date_received, flags)
+       VALUES (5001, 1, 1, 1, 802700001, 0);`,
+    );
+    env = new EnvelopeIndex(db);
+    tmpRoot = mkdtempSync(join(tmpdir(), 'macmail-partial-'));
+    // Only the .partial.emlx form exists — how Mail stores recent messages.
+    const dir = join(tmpRoot, 'user@gmail.com', 'INBOX.mbox', UUID, 'Data', '5', 'Messages');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, '5001.partial.emlx'), buildEmlx('From: a@x.com\n\npartial body'));
+  });
+  afterAll(() => {
+    env.close();
+    rmSync(tmpRoot, { recursive: true, force: true });
+  });
+
+  test('sharded fast path falls through to the .partial name', async () => {
+    const out = await readViaIndex(5001, opts, env, tmpRoot);
+    expect(out).toContain('partial body');
+  });
+
+  test('the walk fallback also matches .partial.emlx', async () => {
+    const out = await runReadUnderRoot(5001, tmpRoot, opts);
+    expect(out).toContain('partial body');
   });
 });
