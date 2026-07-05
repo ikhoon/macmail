@@ -16,6 +16,17 @@
 // provided to dump tables/columns for debugging.
 
 import { Database } from 'bun:sqlite';
+import { shortMailboxName } from './mail-data.ts';
+
+/** Mailboxes that aren't user categories: the INBOX view and Gmail's system
+ *  folders ([Gmail]/*, localized too). Excluded from the labels column. */
+function isSystemMailbox(shortName: string): boolean {
+  return (
+    shortName === 'INBOX' ||
+    shortName.startsWith('[Gmail]/') ||
+    shortName.startsWith('[Google Mail]/')
+  );
+}
 
 // Modern Mail.app (V10+) stores message timestamps in messages.date_received
 // as Unix seconds — not Cocoa NSDate seconds, despite the historical name.
@@ -57,6 +68,9 @@ export interface MessageSummary {
   snippet?: string;
   /** Optional decoded text body set by `--body` searches (may be truncated). */
   text?: string;
+  /** Optional user labels (Gmail-style), set by attachUserLabels(). Excludes
+   *  system mailboxes (INBOX, [Gmail]/*). */
+  labels?: string[];
 }
 
 /** Structured filters applied alongside subject-LIKE / body grep. All
@@ -235,6 +249,38 @@ export class EnvelopeIndex {
       )
       .all(opts.mailboxUrlLike, opts.mailboxUrlLike, opts.max);
     return rows.map(rawToSummary);
+  }
+
+  /**
+   * Attach each message's user labels (Gmail-style categories) in place, via
+   * the `labels` table joined to `mailboxes`. System mailboxes (INBOX,
+   * [Gmail]/*) are excluded, so what's left is the categorization the user
+   * cares about (e.g. "IMON/mdc-dev"). No-op for an empty list. Cheap: one
+   * `WHERE message_id IN (…)` query.
+   */
+  attachUserLabels(msgs: MessageSummary[]): void {
+    if (msgs.length === 0) return;
+    const byId = new Map(msgs.map((m) => [m.id, m]));
+    const placeholders = msgs.map(() => '?').join(',');
+    const rows = this.db
+      .query<{ messageId: number; url: string }, number[]>(
+        `SELECT l.message_id AS messageId, mb.url AS url
+         FROM labels l JOIN mailboxes mb ON l.mailbox_id = mb.ROWID
+         WHERE l.message_id IN (${placeholders})`,
+      )
+      .all(...msgs.map((m) => m.id));
+    const acc = new Map<number, string[]>();
+    for (const r of rows) {
+      const name = shortMailboxName(r.url);
+      if (isSystemMailbox(name)) continue;
+      const list = acc.get(r.messageId) ?? [];
+      if (!list.includes(name)) list.push(name);
+      acc.set(r.messageId, list);
+    }
+    for (const [id, labels] of acc) {
+      const m = byId.get(id);
+      if (m) m.labels = labels.sort();
+    }
   }
 
   /**

@@ -183,6 +183,18 @@ export function resolveAccountUuid(selector: string, accounts: Account[]): strin
   return partial ? partial.uuid : null;
 }
 
+/** Strip `scheme://authority/` from a Mail.app mailbox URL, leaving the decoded
+ *  mailbox path (e.g. `imap://acct/IMON/mdc-dev` → `IMON/mdc-dev`). */
+export function shortMailboxName(url: string): string {
+  const m = url.match(/^[^:]+:\/\/[^/]+\/(.*)$/);
+  if (!m) return url;
+  try {
+    return decodeURIComponent(m[1]);
+  } catch {
+    return m[1];
+  }
+}
+
 /**
  * Convert a Mail.app mailbox URL into the on-disk directory that holds its
  * messages. `imap://<UUID>/A/B/C` → `<mailVersionDir>/<UUID>/A.mbox/B.mbox/

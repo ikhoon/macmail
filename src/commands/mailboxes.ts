@@ -1,26 +1,18 @@
 // commands/mailboxes.ts — list Envelope Index mailboxes, optionally filtered.
 
 import type { EnvelopeIndex, MailboxRow } from '../lib/envelope.ts';
-import { defaultEnvelopeIndexPath } from '../lib/mail-data.ts';
+import { defaultEnvelopeIndexPath, shortMailboxName } from '../lib/mail-data.ts';
 import { EnvelopeIndex as EI } from '../lib/envelope.ts';
 import { formatRecords } from '../lib/output.ts';
 import { cyan } from '../lib/color.ts';
+
+// Re-exported for callers (and tests) that import it from here.
+export { shortMailboxName };
 
 export interface MailboxesOptions {
   json: boolean;
   /** Substring filter against the mailbox URL (case-insensitive). */
   filter?: string;
-}
-
-/** Strip `imap://user@host/` prefix from a Mail.app mailbox URL. */
-export function shortMailboxName(url: string): string {
-  const m = url.match(/^[^:]+:\/\/[^/]+\/(.*)$/);
-  if (!m) return url;
-  try {
-    return decodeURIComponent(m[1]);
-  } catch {
-    return m[1];
-  }
 }
 
 export function formatMailboxes(rows: MailboxRow[], opts: MailboxesOptions): string {
