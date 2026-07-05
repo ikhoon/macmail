@@ -35,10 +35,11 @@ describe('triage command', () => {
     });
     const lines = out.trim().split('\n');
     expect(lines).toHaveLength(2);
+    // Columns are date · sender · subject · id (id last).
     const [first, second] = lines.map((l) => l.split(/ {2,}/));
-    expect(first[0]).toBe('102'); // newest unread
+    expect(first.at(-1)).toBe('102'); // newest unread — id is the last column
     expect(first[2]).toBe('초대장: xDS server design');
-    expect(second[0]).toBe('101');
+    expect(second.at(-1)).toBe('101');
   });
 
   test('respects max', () => {
@@ -89,11 +90,11 @@ describe('triage command', () => {
     // other@icloud.com (storage) and gview@gmail.com (label-mapped view).
     const out = runTriage(env, { json: false, account: '', mailbox: 'INBOX', max: 10 });
     const rows = out.trim().split('\n').map((l) => l.split(/ {2,}/));
+    // Columns are date · account · sender · subject · id (id last).
     // 400 (gview), 300 (icloud), 102 + 101 (user@gmail), newest-first.
-    expect(rows.map((r) => r[0])).toEqual(['400', '300', '102', '101']);
-    // Five columns now: id, account, sender, subject, date.
+    expect(rows.map((r) => r.at(-1))).toEqual(['400', '300', '102', '101']);
     expect(rows.every((r) => r.length === 5)).toBe(true);
-    // Account column carries the URL authority when no Account list is given.
+    // Account column (after date) carries the URL authority when no Account list.
     expect(rows[0][1]).toBe('gview@gmail.com');
     expect(rows[1][1]).toBe('other@icloud.com');
     expect(rows[2][1]).toBe('user@gmail.com');

@@ -62,8 +62,8 @@ export function formatTriage(
     accountIdFromMailboxUrl(m.mailboxUrl)?.toUpperCase() ?? '';
   const multiAccount = new Set(msgs.map(idOf)).size > 1;
   const fields = multiAccount
-    ? ['id', 'account', 'sender', 'subject', 'date']
-    : ['id', 'sender', 'subject', 'date'];
+    ? ['date', 'account', 'sender', 'subject', 'id']
+    : ['date', 'sender', 'subject', 'id'];
   return formatRecords(
     msgs.map((m) => {
       const row: Record<string, unknown> = { id: m.id };

@@ -194,10 +194,12 @@ $ macmail triage --account Work --max 3
 2197588   Jira <jira@example.com>           [PROJ-1201] assigned to you     2026-06-01T14:02:10+09:00
 ```
 
-Columns: `id`, `sender`, `subject`, `date` (local time). When the result spans
-more than one account, an `account` column is inserted after `id` — showing the
-account **email** (which address the message arrived at) so you can tell your
-inboxes apart. (`--json` keeps `account` as the account name.)
+Columns: `date` (local time), `sender`, `subject`, `id` — date first for
+chronological scanning, `id` (what you pass to `read` / `mark` / `reply`) last,
+matching maccal. When the result spans more than one account, an `account`
+column is inserted after `date` — showing the account **email** (which address
+the message arrived at) so you can tell your inboxes apart. (`--json` keeps
+`account` as the account name.)
 
 ```bash
 macmail triage                          # unread INBOX across all accounts (or your default)
