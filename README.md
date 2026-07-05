@@ -264,7 +264,9 @@ $ macmail search 'release notes' --in body --mailbox JIRA --days 14 --snippet
 2196120   Jira <jira@example.com>   [PROJ-980] Release notes for 3.4   2026-05-28T09:11:02+09:00   …please review the release notes before Friday's cut…
 ```
 
-Default scope is `--in subject`; default `--max` is `10`.
+Default scope is `--in subject`; default `--max` is `10`. Columns match
+[`triage`](#triage): `date · [account] · [mailbox] · sender · subject · id`, with
+the account and Gmail-label columns appearing under the same rules.
 
 #### Search by scope
 

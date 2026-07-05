@@ -502,3 +502,66 @@ describe('formatSearchOutput', () => {
     expect(lines[0].text).toBe('hello body');
   });
 });
+
+describe('formatSearchOutput account + mailbox columns (shared with triage)', () => {
+  const A = 'imap://AAAAAAAA-0000-0000-0000-000000000001/INBOX';
+  const B = 'imap://BBBBBBBB-0000-0000-0000-000000000002/INBOX';
+  const accounts = [
+    { uuid: 'AAAAAAAA-0000-0000-0000-000000000001', name: 'Work', email: 'w@x.com', type: 'Gmail' },
+    { uuid: 'BBBBBBBB-0000-0000-0000-000000000002', name: 'Personal', email: 'p@x.com', type: 'iCloud' },
+  ];
+  const row = (id: number, url: string, labels?: string[]): MessageSummary => ({
+    id,
+    sender: 'Alice <a@x.com>',
+    subject: `subject ${id}`,
+    dateReceived: new Date(2026, 4, 27, 10, 0, 0),
+    read: false,
+    flags: 0,
+    mailboxId: 0,
+    mailboxUrl: url,
+    labels,
+  });
+
+  test('spanning accounts adds the short account name after date', () => {
+    const out = formatSearchOutput(
+      { rows: [row(1, A), row(2, B)], total: 2 },
+      { json: false, max: 10 },
+      accounts,
+    );
+    const cols = out.trim().split('\n').map((l) => l.split(/ {2,}/));
+    expect(cols[0][1]).toBe('Work');
+    expect(cols[1][1]).toBe('Personal');
+  });
+
+  test('--full swaps the account name for its email', () => {
+    const out = formatSearchOutput(
+      { rows: [row(1, A), row(2, B)], total: 2 },
+      { json: false, max: 10, full: true },
+      accounts,
+    );
+    const cols = out.trim().split('\n').map((l) => l.split(/ {2,}/));
+    expect(cols[0][1]).toBe('w@x.com');
+  });
+
+  test('user labels render in a mailbox column with an INBOX fallback', () => {
+    const out = formatSearchOutput(
+      { rows: [row(1, A, ['G/github']), row(2, A)], total: 2 },
+      { json: false, max: 10 },
+      accounts,
+    );
+    const first = out.trim().split('\n')[0].split(/ {2,}/);
+    expect(first[1]).toBe('G/github');
+    expect(out.trim().split('\n')[1]).toContain('INBOX');
+  });
+
+  test('JSON rows carry account name + labels array', () => {
+    const out = formatSearchOutput(
+      { rows: [row(1, A, ['G/github']), row(2, B)], total: 2 },
+      { json: true, max: 10 },
+      accounts,
+    );
+    const first = JSON.parse(out.trim().split('\n')[0]);
+    expect(first.account).toBe('Work');
+    expect(first.labels).toEqual(['G/github']);
+  });
+});
